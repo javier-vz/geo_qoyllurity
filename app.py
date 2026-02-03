@@ -382,7 +382,7 @@ def extraer_lugares(grafo):
     return resultados
 
 def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-71.97, zoom=10):
-    """Agrupa lugares con mismas coordenadas PERO cada uno es clickable"""
+    """Mapa SIMPLE donde CADA lugar es clickable y NO hay duplicados"""
     
     lugares_con_coords = [l for l in lugares_data if l['lat'] and l['lon']]
     
@@ -392,117 +392,84 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     mapa = folium.Map(
         location=[center_lat, center_lon],
         zoom_start=zoom,
-        tiles='OpenStreetMap',
-        control_scale=True
+        tiles='OpenStreetMap'
     )
     
-    # Agrupar por coordenadas
+    # Para separar lugares con mismas coordenadas VISUALMENTE
+    # pero manteniendo el concepto de "están en el mismo sitio"
     from collections import defaultdict
-    grupos = defaultdict(list)
+    lugares_por_punto = defaultdict(list)
     
+    # Agrupar por coordenadas (redondeadas a 4 decimales = ~11m)
     for lugar in lugares_con_coords:
-        key = (lugar['lat'], lugar['lon'])
-        grupos[key].append(lugar)
+        key = (round(lugar['lat'], 4), round(lugar['lon'], 4))
+        lugares_por_punto[key].append(lugar)
     
-    # Para cada grupo
-    for (lat, lon), lugares in grupos.items():
+    # Para cada punto (coordenadas únicas)
+    for (lat, lon), lugares in lugares_por_punto.items():
         if len(lugares) == 1:
-            # Solo un lugar - marcador normal
+            # Un solo lugar en este punto
             lugar = lugares[0]
             relaciones = obtener_relaciones_lugar(grafo, lugar['uri'])
             popup_html = crear_popup_html(lugar, relaciones)
             
             color = 'blue'
-            if lugar['tipo_general'] == 'Iglesia': color = 'purple'
-            elif lugar['tipo_general'] == 'Santuario': color = 'red'
+            icon = 'info-sign'
+            if lugar['tipo_general'] == 'Iglesia':
+                color = 'purple'
+                icon = 'place-of-worship'
+            elif lugar['tipo_general'] == 'Santuario':
+                color = 'red'
+                icon = 'star'
+            elif lugar['tipo_general'] == 'Glaciar':
+                color = 'lightblue'
+                icon = 'mountain'
             
             folium.Marker(
                 [lat, lon],
                 popup=folium.Popup(popup_html, max_width=350),
                 tooltip=lugar['nombre'],
-                icon=folium.Icon(color=color, icon='info-sign')
+                icon=folium.Icon(color=color, icon=icon, prefix='fa')
             ).add_to(mapa)
             
         else:
-            # MÚLTIPLES lugares - crear MARCADOR DE GRUPO
-            # Este marcador agrupa pero permite ver todos
+            # Múltiples lugares en el MISMO punto
+            # Crear un FeatureGroup para este punto
+            grupo = folium.FeatureGroup(name=f'{lat:.4f}, {lon:.4f}')
             
-            # HTML del popup del GRUPO
-            popup_grupo_html = f"""
-            <div style="width: 300px; font-family: Arial; padding: 10px;">
-                <h4 style="margin: 0 0 10px 0; color: #2c3e50;">
-                    📍 {len(lugares)} lugares aquí
-                </h4>
-                <p style="margin: 0 0 10px 0; font-size: 13px;">
-                    <strong>Coordenadas:</strong> {lat:.6f}, {lon:.6f}
-                </p>
-                <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 8px;">
-            """
-            
-            # Añadir CADA lugar como elemento CLICKABLE en el popup
+            # Añadir CADA lugar como marcador EN LAS MISMAS coordenadas
+            # Folium los superpondrá, pero todos serán clickables
             for i, lugar in enumerate(lugares):
-                # Mini-info de cada lugar
-                icono = '📍'
-                if lugar['tipo_general'] == 'Localidad': icono = '🏘️'
-                elif lugar['tipo_general'] == 'Iglesia': icono = '⛪'
-                elif lugar['tipo_general'] == 'Santuario': icono = '🛐'
-                
-                popup_grupo_html += f"""
-                <div style="padding: 6px; margin: 4px 0; background: {'#f5f5f5' if i % 2 == 0 else 'white'}; 
-                            border-radius: 4px; border-left: 3px solid #3498db;">
-                    <div style="font-weight: bold; font-size: 13px;">
-                        {icono} {html.escape(lugar['nombre'])}
-                    </div>
-                    <div style="font-size: 11px; color: #666;">
-                        {lugar['tipo_general']} • Nivel {lugar['nivel']}
-                    </div>
-                </div>
-                """
-            
-            popup_grupo_html += """
-                </div>
-                <p style="margin-top: 10px; font-size: 11px; color: #7f8c8d;">
-                    💡 <em>Cada lugar tiene su información completa</em>
-                </p>
-            </div>
-            """
-            
-            # Marcador del GRUPO (color especial)
-            folium.Marker(
-                [lat, lon],
-                popup=folium.Popup(popup_grupo_html, max_width=350),
-                tooltip=f"📍 {len(lugares)} lugares aquí",
-                icon=folium.Icon(color='orange', icon='layer-group', prefix='fa')
-            ).add_to(mapa)
-            
-            # También añadir marcadores individuales (pero muy juntos)
-            # Así el usuario puede clickear el grupo O cada lugar
-            for i, lugar in enumerate(lugares):
-                # Mover cada uno un poquito para poder clickear individualmente
-                desplazamiento = 0.00005 * i  # Muy pequeño, casi imperceptible
-                lat_individual = lat + desplazamiento
-                lon_individual = lon + desplazamiento
-                
-                # Popup INDIVIDUAL completo
                 relaciones = obtener_relaciones_lugar(grafo, lugar['uri'])
-                popup_individual_html = crear_popup_html(lugar, relaciones)
+                popup_html = crear_popup_html(lugar, relaciones)
                 
-                # Color individual
-                color_individual = 'blue'
-                if lugar['tipo_general'] == 'Iglesia': color_individual = 'purple'
-                elif lugar['tipo_general'] == 'Santuario': color_individual = 'red'
+                color = 'blue'
+                if lugar['tipo_general'] == 'Iglesia':
+                    color = 'purple'
+                elif lugar['tipo_general'] == 'Santuario':
+                    color = 'red'
                 
-                # Marcador individual (casi en el mismo sitio)
-                folium.CircleMarker(
-                    [lat_individual, lon_individual],
-                    radius=6,
-                    color=color_individual,
-                    fill=True,
-                    fill_color=color_individual,
-                    fill_opacity=0.7,
-                    popup=folium.Popup(popup_individual_html, max_width=350),
-                    tooltip=lugar['nombre']
-                ).add_to(mapa)
+                # Marcador NORMAL en las MISMAS coordenadas
+                folium.Marker(
+                    [lat, lon],  # ¡MISMAS coordenadas para todos!
+                    popup=folium.Popup(popup_html, max_width=350),
+                    tooltip=f"{lugar['nombre']} ({i+1}/{len(lugares)})",
+                    icon=folium.Icon(color=color, icon='info-sign')
+                ).add_to(grupo)
+            
+            # Añadir un círculo que indique "aquí hay múltiples lugares"
+            folium.CircleMarker(
+                [lat, lon],
+                radius=10,
+                color='orange',
+                fill=True,
+                fill_color='orange',
+                fill_opacity=0.3,
+                popup=f"<b>📍 {len(lugares)} lugares aquí</b><br>Haz click en los marcadores",
+                tooltip=f"{len(lugares)} lugares"
+            ).add_to(grupo)
+            
+            grupo.add_to(mapa)
     
     return mapa
 
