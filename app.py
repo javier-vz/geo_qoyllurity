@@ -41,9 +41,11 @@ RDF = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
 # -------------------------------------------------------------------
 
 def obtener_relaciones_lugar(grafo, uri_lugar):
-    """Obtiene todas las relaciones de un lugar desde el grafo - CONSULTAS CORREGIDAS"""
+    """Obtiene relaciones para un lugar - VERSIÓN CON AGRUPACIÓN"""
     
-    print(f"🔍 Buscando relaciones para URI: {uri_lugar}")
+    # Extraer nombre del lugar de la URI para debug
+    nombre_lugar = uri_lugar.split('#')[-1] if '#' in uri_lugar else uri_lugar.split('/')[-1]
+    print(f"🔍 Buscando relaciones para: {nombre_lugar}")
     
     relaciones = {
         'eventos': [],
@@ -54,122 +56,87 @@ def obtener_relaciones_lugar(grafo, uri_lugar):
         'naciones': []
     }
     
-    # 1. Eventos que ocurren en este lugar - CONSULTA CORREGIDA
+    # 1. Eventos que ocurren en ESTE lugar específico (por URI exacta)
     query_eventos = f"""
     PREFIX : <http://example.org/festividades#>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     
-    SELECT ?evento ?nombre ?descripcion
+    SELECT DISTINCT ?nombre ?descripcion
     WHERE {{
       ?evento a :EventoRitual ;
               rdfs:label ?nombre ;
               :estaEnLugar <{uri_lugar}> .
       OPTIONAL {{ ?evento :descripcionBreve ?descripcion . }}
     }}
+    ORDER BY ?nombre
     """
     
     try:
-        resultados = list(grafo.query(query_eventos))
-        print(f"  ✅ Eventos encontrados: {len(resultados)}")
-        for row in resultados:
+        for row in grafo.query(query_eventos):
             relaciones['eventos'].append({
                 'nombre': str(row.nombre),
                 'descripcion': str(row.descripcion) if row.descripcion else None
             })
+        print(f"  ✅ Eventos encontrados: {len(relaciones['eventos'])}")
     except Exception as e:
         print(f"  ❌ Error en query eventos: {str(e)}")
     
-    # 2. Festividades que se celebran aquí - CONSULTA CORREGIDA
+    # 2. Festividades que se celebran en ESTE lugar específico
     query_festividades = f"""
     PREFIX : <http://example.org/festividades#>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     
-    SELECT ?festividad ?nombre ?descripcion
+    SELECT DISTINCT ?nombre ?descripcion
     WHERE {{
       ?festividad a :Festividad ;
                   rdfs:label ?nombre ;
                   :SeCelebraEn <{uri_lugar}> .
       OPTIONAL {{ ?festividad :descripcionBreve ?descripcion . }}
     }}
+    ORDER BY ?nombre
     """
     
     try:
-        resultados = list(grafo.query(query_festividades))
-        print(f"  ✅ Festividades encontradas: {len(resultados)}")
-        for row in resultados:
+        for row in grafo.query(query_festividades):
             relaciones['festividades'].append({
                 'nombre': str(row.nombre),
                 'descripcion': str(row.descripcion) if row.descripcion else None
             })
+        print(f"  ✅ Festividades encontradas: {len(relaciones['festividades'])}")
     except Exception as e:
         print(f"  ❌ Error en query festividades: {str(e)}")
     
-    # 3. Recursos multimedia que documentan este lugar - CONSULTA CORREGIDA
+    # 3. Recursos multimedia que documentan ESTE lugar
     query_recursos = f"""
     PREFIX : <http://example.org/festividades#>
-    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     
-    SELECT ?recurso ?codigo ?ruta
+    SELECT DISTINCT ?codigo
     WHERE {{
       ?recurso a :RecursoMedial ;
                :documentaA <{uri_lugar}> ;
                :codigoRecurso ?codigo .
-      OPTIONAL {{ ?recurso :rutaArchivo ?ruta . }}
     }}
     LIMIT 5
     """
     
     try:
-        resultados = list(grafo.query(query_recursos))
-        print(f"  ✅ Recursos encontrados: {len(resultados)}")
-        for row in resultados:
+        for row in grafo.query(query_recursos):
             codigo = str(row.codigo)
-            # Determinar tipo basado en el código (como indica el TTL)
-            if "-FOTO-" in codigo:
-                tipo_recurso = "📸 Foto"
-            elif "-VID-" in codigo:
-                tipo_recurso = "🎥 Video"
-            elif "-AUD-" in codigo:
-                tipo_recurso = "🎧 Audio"
-            elif "-DOC-" in codigo:
-                tipo_recurso = "📄 Documento"
-            else:
-                tipo_recurso = "📁 Recurso"
+            # Determinar tipo basado en el código
+            if "-FOTO-" in codigo: tipo_recurso = "📸 Foto"
+            elif "-VID-" in codigo: tipo_recurso = "🎥 Video"
+            elif "-AUD-" in codigo: tipo_recurso = "🎧 Audio"
+            elif "-DOC-" in codigo: tipo_recurso = "📄 Documento"
+            else: tipo_recurso = "📁 Recurso"
             
             relaciones['recursos'].append({
                 'codigo': codigo,
                 'tipo': tipo_recurso,
-                'ruta': str(row.ruta) if row.ruta else ""
+                'ruta': ""
             })
+        print(f"  ✅ Recursos encontrados: {len(relaciones['recursos'])}")
     except Exception as e:
         print(f"  ❌ Error en query recursos: {str(e)}")
-    
-    # 4. Lugares en los que está ubicado (relación :ubicadoEn) - NUEVA CONSULTA
-    query_ubicado_en = f"""
-    PREFIX : <http://example.org/festividades#>
-    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-    
-    SELECT ?lugarSuperior ?nombre
-    WHERE {{
-      <{uri_lugar}> :ubicadoEn ?lugarSuperior .
-      ?lugarSuperior rdfs:label ?nombre .
-    }}
-    """
-    
-    try:
-        resultados = list(grafo.query(query_ubicado_en))
-        print(f"  ✅ Lugares superiores encontrados: {len(resultados)}")
-        for row in resultados:
-            relaciones['ubicado_en'].append(str(row.nombre))
-    except Exception as e:
-        print(f"  ❌ Error en query ubicadoEn: {str(e)}")
-    
-    # Resumen final
-    print(f"  📊 Resumen para {uri_lugar.split('#')[-1]}:")
-    print(f"    • Eventos: {len(relaciones['eventos'])}")
-    print(f"    • Festividades: {len(relaciones['festividades'])}")
-    print(f"    • Recursos: {len(relaciones['recursos'])}")
-    print(f"    • Ubicado en: {len(relaciones['ubicado_en'])}")
     
     return relaciones
 
