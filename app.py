@@ -382,94 +382,87 @@ def extraer_lugares(grafo):
     return resultados
 
 def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-71.97, zoom=10):
-    """Mapa SIMPLE donde CADA lugar es clickable y NO hay duplicados"""
+    """Crea un mapa Folium con popups enriquecidos"""
     
+    # Filtrar lugares con coordenadas
     lugares_con_coords = [l for l in lugares_data if l['lat'] and l['lon']]
     
     if not lugares_con_coords:
         return folium.Map(location=[center_lat, center_lon], zoom_start=zoom)
     
+    # Crear mapa base
     mapa = folium.Map(
         location=[center_lat, center_lon],
         zoom_start=zoom,
-        tiles='OpenStreetMap'
+        tiles='CartoDB positron',
+        control_scale=True
     )
     
-    # Para separar lugares con mismas coordenadas VISUALMENTE
-    # pero manteniendo el concepto de "están en el mismo sitio"
-    from collections import defaultdict
-    lugares_por_punto = defaultdict(list)
+    # Configurar iconos personalizados
+    icon_configs = {
+        'Localidad': {'color': 'blue', 'icon': 'home', 'prefix': 'fa'},
+        'Santuario': {'color': 'red', 'icon': 'star', 'prefix': 'fa'},
+        'Glaciar': {'color': 'lightblue', 'icon': 'mountain', 'prefix': 'fa'},
+        'Iglesia': {'color': 'purple', 'icon': 'place-of-worship', 'prefix': 'fa'},
+        'Ruta': {'color': 'orange', 'icon': 'road', 'prefix': 'fa'},
+        'Lugar': {'color': 'green', 'icon': 'map-marker-alt', 'prefix': 'fa'}
+    }
     
-    # Agrupar por coordenadas (redondeadas a 4 decimales = ~11m)
+    # Añadir marcadores con popups enriquecidos
     for lugar in lugares_con_coords:
-        key = (round(lugar['lat'], 4), round(lugar['lon'], 4))
-        lugares_por_punto[key].append(lugar)
+        # Obtener relaciones para este lugar
+        relaciones = obtener_relaciones_lugar(grafo, lugar['uri'])
+        
+        # Crear popup HTML con relaciones
+        popup_html = crear_popup_html(lugar, relaciones)
+        
+        # Configurar icono
+        tipo = lugar['tipo_general']
+        icon_config = icon_configs.get(tipo, {'color': 'gray', 'icon': 'info-circle', 'prefix': 'fa'})
+        
+        # Crear marcador
+        folium.Marker(
+            location=[lugar['lat'], lugar['lon']],
+            popup=folium.Popup(popup_html, max_width=350, max_height=500),
+            tooltip=f"📍 {lugar['nombre']}",
+            icon=folium.Icon(
+                color=icon_config['color'],
+                icon=icon_config['icon'],
+                prefix=icon_config['prefix']
+            )
+        ).add_to(mapa)
     
-    # Para cada punto (coordenadas únicas)
-    for (lat, lon), lugares in lugares_por_punto.items():
-        if len(lugares) == 1:
-            # Un solo lugar en este punto
-            lugar = lugares[0]
+    # Añadir clustering para muchos marcadores
+    if len(lugares_con_coords) > 15:
+        marker_cluster = plugins.MarkerCluster(
+            name="Lugares",
+            options={
+                'maxClusterRadius': 50,
+                'iconCreateFunction': '''
+                function(cluster) {
+                    var count = cluster.getChildCount();
+                    var size = count < 10 ? 'small' : count < 50 ? 'medium' : 'large';
+                    return L.divIcon({
+                        html: '<div style="background-color: rgba(52, 152, 219, 0.7); color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-weight: bold;">' + count + '</div>',
+                        className: 'marker-cluster-' + size,
+                        iconSize: new L.Point(40, 40)
+                    });
+                }
+                '''
+            }
+        ).add_to(mapa)
+        
+        for lugar in lugares_con_coords:
             relaciones = obtener_relaciones_lugar(grafo, lugar['uri'])
             popup_html = crear_popup_html(lugar, relaciones)
             
-            color = 'blue'
-            icon = 'info-sign'
-            if lugar['tipo_general'] == 'Iglesia':
-                color = 'purple'
-                icon = 'place-of-worship'
-            elif lugar['tipo_general'] == 'Santuario':
-                color = 'red'
-                icon = 'star'
-            elif lugar['tipo_general'] == 'Glaciar':
-                color = 'lightblue'
-                icon = 'mountain'
-            
             folium.Marker(
-                [lat, lon],
-                popup=folium.Popup(popup_html, max_width=350),
-                tooltip=lugar['nombre'],
-                icon=folium.Icon(color=color, icon=icon, prefix='fa')
-            ).add_to(mapa)
-            
-        else:
-            # Múltiples lugares en el MISMO punto
-            # Crear un FeatureGroup para este punto
-            grupo = folium.FeatureGroup(name=f'{lat:.4f}, {lon:.4f}')
-            
-            # Añadir CADA lugar como marcador EN LAS MISMAS coordenadas
-            # Folium los superpondrá, pero todos serán clickables
-            for i, lugar in enumerate(lugares):
-                relaciones = obtener_relaciones_lugar(grafo, lugar['uri'])
-                popup_html = crear_popup_html(lugar, relaciones)
-                
-                color = 'blue'
-                if lugar['tipo_general'] == 'Iglesia':
-                    color = 'purple'
-                elif lugar['tipo_general'] == 'Santuario':
-                    color = 'red'
-                
-                # Marcador NORMAL en las MISMAS coordenadas
-                folium.Marker(
-                    [lat, lon],  # ¡MISMAS coordenadas para todos!
-                    popup=folium.Popup(popup_html, max_width=350),
-                    tooltip=f"{lugar['nombre']} ({i+1}/{len(lugares)})",
-                    icon=folium.Icon(color=color, icon='info-sign')
-                ).add_to(grupo)
-            
-            # Añadir un círculo que indique "aquí hay múltiples lugares"
-            folium.CircleMarker(
-                [lat, lon],
-                radius=10,
-                color='orange',
-                fill=True,
-                fill_color='orange',
-                fill_opacity=0.3,
-                popup=f"<b>📍 {len(lugares)} lugares aquí</b><br>Haz click en los marcadores",
-                tooltip=f"{len(lugares)} lugares"
-            ).add_to(grupo)
-            
-            grupo.add_to(mapa)
+                [lugar['lat'], lugar['lon']],
+                popup=folium.Popup(popup_html, max_width=350)
+            ).add_to(marker_cluster)
+    
+    # Añadir control de capas
+    folium.LayerControl().add_to(mapa)
     
     return mapa
 
