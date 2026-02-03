@@ -484,7 +484,6 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     if not lugares_con_coords:
         return folium.Map(location=[center_lat, center_lon], zoom_start=zoom)
     
-    # --- MAPA BASE ---
     mapa = folium.Map(
         location=[center_lat, center_lon],
         zoom_start=zoom,
@@ -519,9 +518,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
         'Lugar': {'color': 'green', 'icon': 'map-marker-alt', 'prefix': 'fa'}
     }
     
-    # --- Manejar coordenadas duplicadas ---
     from collections import defaultdict
-    import math
     
     # Agrupar lugares por coordenadas
     lugares_por_punto = defaultdict(list)
@@ -532,162 +529,13 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     # Para cada punto único
     for (lat, lon), lugares in lugares_por_punto.items():
         if len(lugares) == 1:
-            # Un solo lugar - marcador normal
+            # Un solo lugar
             lugar = lugares[0]
             relaciones = obtener_relaciones_lugar(grafo, lugar['uri'])
             popup_html = crear_popup_html(lugar, relaciones)
             
             tipo = lugar['tipo_general']
-            icon_config = icon_configs.get(tipo, {'color': 'gray', 'icon': 'info-circle', 'prefix': 'fa'})
-            
-            folium.Marker(
-                location=[lat, lon],
-                popup=folium.Popup(
-                    popup_html,
-                    max_width=350,
-                    max_height=500,
-                    parse_html=True  # Permitir HTML
-                ),
-                tooltip=f"📍 {lugar['nombre']}",
-                icon=folium.Icon(
-                    color=icon_config['color'],
-                    icon=icon_config['icon'],
-                    prefix=icon_config['prefix']
-                )
-            ).add_to(mapa)
-            
-        else:
-            # Múltiples lugares en mismo punto - SOLUCIÓN DEFINITIVA
-            # Crear un FeatureGroup para agrupar
-            feature_group = folium.FeatureGroup(name=f"{len(lugares)} lugares en ({lat:.4f}, {lon:.4f})")
-            
-            # Para lugares superpuestos, ESPACIARLOS ligeramente
-            radio = 0.0002  # ~22 metros (más separación)
-            
-            for i, lugar in enumerate(lugares):
-                # Calcular posición en espiral para mejor separación
-                angle = (2 * math.pi * i) / len(lugares)
-                offset_lat = lat + radio * math.cos(angle)
-                offset_lon = lon + radio * math.sin(angle)
-                
-                # Obtener relaciones
-                relaciones = obtener_relaciones_lugar(grafo, lugar['uri'])
-                popup_html = crear_popup_html(lugar, relaciones)
-                
-                # Color según tipo
-                tipo = lugar['tipo_general']
-                icon_config = icon_configs.get(tipo, {'color': 'gray', 'icon': 'info-circle', 'prefix': 'fa'})
-                
-                # Crear marcador con número
-                folium.Marker(
-                    location=[offset_lat, offset_lon],
-                    popup=folium.Popup(
-                        popup_html,
-                        max_width=350,
-                        max_height=500,
-                        parse_html=True
-                    ),
-                    tooltip=f"{i+1}. {lugar['nombre']} ({lugar['tipo_general']})",
-                    icon=folium.DivIcon(
-                        html=f"""
-                        <div style="
-                            background-color: {icon_config['color']};
-                            color: white;
-                            width: 30px;
-                            height: 30px;
-                            border-radius: 50%;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            font-weight: bold;
-                            font-size: 14px;
-                            border: 2px solid white;
-                            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-                        ">
-                            {i+1}
-                        </div>
-                        """,
-                        icon_size=(30, 30),
-                        icon_anchor=(15, 15)
-                    )
-                ).add_to(feature_group)
-                
-                # Añadir línea conectora al punto central
-                folium.PolyLine(
-                    locations=[[lat, lon], [offset_lat, offset_lon]],
-                    color=icon_config['color'],
-                    weight=1,
-                    opacity=0.5,
-                    dash_array='5, 5'
-                ).add_to(feature_group)
-            
-            # Añadir marcador central con información del grupo
-            popup_grupo_html = f"""
-            <div style="width: 320px; font-family: Arial;">
-                <div style="background: linear-gradient(135deg, #f39c12, #e67e22); 
-                     color: white; padding: 12px; border-radius: 5px 5px 0 0;">
-                    <h3 style="margin: 0; font-size: 16px;">📍 {len(lugares)} lugares</h3>
-                    <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">
-                        Haz click en los números para ver cada lugar
-                    </p>
-                </div>
-                <div style="padding: 12px; background: white;">
-                    <p style="margin: 0 0 10px 0; font-size: 13px; color: #555;">
-                        <strong>Coordenadas:</strong> {lat:.6f}, {lon:.6f}
-                    </p>
-                    <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #e0e0e0;">
-                        <p style="margin: 0; font-size: 12px; color: #666;">
-                            <strong>📍 Lugares en este punto:</strong>
-                        </p>
-                        <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 12px;">
-            """
-            
-            for i, lugar in enumerate(lugares):
-                icono = '📍'
-                if lugar['tipo_general'] == 'Localidad': icono = '🏘️'
-                elif lugar['tipo_general'] == 'Iglesia': icono = '⛪'
-                elif lugar['tipo_general'] == 'Santuario': icono = '🛐'
-                
-                popup_grupo_html += f"""
-                            <li style="margin-bottom: 5px;">
-                                <span style="font-weight: bold; color: #2c3e50;">{icono} {i+1}. {html.escape(lugar['nombre'])}</span>
-                                <span style="color: #7f8c8d; font-size: 11px;"> ({lugar['tipo_general']})</span>
-                            </li>
-                """
-            
-            popup_grupo_html += """
-                        </ul>
-                    </div>
-                    <p style="margin: 10px 0 0 0; font-size: 11px; color: #95a5a6; font-style: italic;">
-                        💡 Cada número representa un marcador clickeable con su propio popup
-                    </p>
-                </div>
-            </div>
-            """
-            
-            # Marcador central
-            folium.Marker(
-                location=[lat, lon],
-                popup=folium.Popup(
-                    popup_grupo_html,
-                    max_width=350,
-                    parse_html=True
-                ),
-                tooltip=f"📍 Grupo de {len(lugares)} lugares",
-                icon=folium.Icon(
-                    color='orange',
-                    icon='layer-group',
-                    prefix='fa'
-                )
-            ).add_to(feature_group)
-            
-            # Añadir el grupo al mapa
-            feature_group.add_to(mapa)
-    
-    # Añadir control de capas
-    folium.LayerControl().add_to(mapa)
-    
-    return mapa
+            icon_config = icon_configs.get(tipo, {'color': 'gray
 
 # -------------------------------------------------------------------
 # INTERFAZ STREAMLIT
