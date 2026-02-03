@@ -1,0 +1,1422 @@
+@prefix :    <http://example.org/festividades#> .
+@prefix geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:<http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+#################################################################
+### ONTOLOGÍA
+### Una ontología define el vocabulario común:
+### qué tipos de cosas existen y cómo se relacionan.
+#################################################################
+
+:OntologiaFestividades a owl:Ontology ;
+  rdfs:label "Ontología esencial de festividades andinas"@es ;
+  rdfs:comment "Ontología para describir festividades, eventos rituales, lugares, comunidades y recursos mediales asociados a Qoyllur Rit’i y la Virgen del Carmen."@es .
+
+#################################################################
+### GUÍA RÁPIDA PARA EL EQUIPO (LEER ANTES DE EDITAR)
+### Este TTL es “esencial”: contiene lo mínimo profesional para
+### (1) tener un grafo navegable y consistente, y (2) alimentar RAG.
+###
+### En este archivo verás:
+### - CLASES: tipos generales (Festividad, Lugar, EventoRitual, etc.)
+### - PROPIEDADES: relaciones (object properties) y datos simples (datatype)
+### - INDIVIDUOS: cosas concretas del mundo real (Paucartambo, Colque Punku, etc.)
+###
+### Nota: rdfs:label y descripciones están en español (@es).
+#################################################################
+
+#################################################################
+### ¿QUÉ ES UNA CLASE?
+### Una clase (owl:Class) es un “tipo de cosa”.
+### Ej: :Festividad, :Lugar, :EventoRitual, :Foto.
+###
+### ¿QUÉ ES UNA SUBCLASE?
+### Una subclase (rdfs:subClassOf) hereda características del tipo “padre”.
+### Ej: :Procesion rdfs:subClassOf :EventoRitual.
+### Significa: “toda Procesión es un EventoRitual”.
+#################################################################
+
+#################################################################
+### ¿QUÉ ES UN INDIVIDUO?
+### Un individuo (owl:NamedIndividual o “a :Clase”) es una entidad concreta:
+### Ej: :Paucartambo a :Localidad ;  :ColquePunku a :Glaciar ; etc.
+###
+### REGLA PRÁCTICA:
+### - Clases: conceptos generales (tipos).
+### - Individuos: instancias reales (cosas específicas del dominio).
+#################################################################
+
+#################################################################
+### REGLAS DE MODELADO (MUY IMPORTANTES)
+###
+### 1) EVENTO vs TIEMPO (NO CONFUNDIR)
+### - :EventoRitual = “algo que pasa” (acción/actividad) y suele poder ubicarse.
+###   Ej: “Bajada desde Colque Punku”, “Entrada de Naciones”, “Procesión principal”.
+###
+### - :TiempoRitual / :SegmentoRitual = “cuándo” (franja temporal significativa).
+###   Ej: “Alba”, “Noche”, “Víspera”, “Día central”.
+###
+### RELACIONES CORRECTAS:
+### - Un EventoRitual se conecta a un Lugar con :estaEnLugar.
+### - Un EventoRitual puede (si aplica) conectarse a un Tiempo con :ocurreDurante.
+###
+### ANTI-PATRÓN (EVITAR):
+### - No usar :ocurreDurante para decir “la festividad ocurre durante el alba”.
+###   La festividad contiene muchos eventos y tiempos; el “alba” es de eventos,
+###   no del concepto completo de festividad.
+###
+### 2) FESTIVIDAD: DÓNDE SE CELEBRA
+### - La Festividad se conecta a Lugar(es) con :SeCelebraEn.
+###   Ej: Virgen del Carmen -> Paucartambo + Iglesia.
+###       Qoyllur Rit’i -> Sinakara + Santuario.
+###
+### 3) RECURSO MEDIAL (FOTO/VIDEO/AUDIO/DOC)
+### - Un recurso “documenta” algo con :documentaA (evento, lugar o festividad).
+### - Debe tener código estable (:codigoRecurso) y ruta/url (:rutaArchivo).
+### - Debe tener fecha de captura si se conoce (:fechaCaptura).
+#################################################################
+
+#################################################################
+### CONVENCIONES DE NOMBRES (CONGELADAS)
+###
+### 1) Clases (Tipos)
+### - PascalCase, sin tildes ni espacios:
+###   :Festividad, :EventoRitual, :EntidadVenerada, :RecursoMedial, :DocumentoTexto
+###
+### 2) Propiedades
+### - camelCase, verbos claros:
+###   :SeCelebraEn, :incluyeEvento, :estaEnLugar, :ocurreDurante, :documentaA
+###
+### 3) Individuos (Entidades reales)
+### - PascalCase o NombreConGuionesBajos si es necesario, sin tildes:
+###   :Paucartambo, :Sinakara, :ColquePunku, :IglesiaPaucartambo
+###
+### 4) Recursos mediales (IDs + código)
+### - IRI del individuo: usar prefijo + tipo + año + correlativo con guiones bajos:
+###   :QOY_FOTO_2025_001, :PAU_AUD_2024_003, :QOY_VID_2023_002
+###
+### - Código humano-legible (annotation):
+###   :codigoRecurso "QOY-FOTO-2025-001" .
+###
+### FORMATO DEL CÓDIGO:
+###   {FEST}-{TIPO}-{AÑO}-{NRO}
+###   FEST: QOY (Qoyllur Rit’i), PAU (Paucartambo)
+###   TIPO: FOTO, VID, AUD, DOC
+###   NRO: 001, 002, 003...
+###
+### 5) Nombres consistentes (IMPORTANTE)
+### - No mezclar :seCelebraEn con :SeCelebraEn.
+### - En este TTL la propiedad oficial es :SeCelebraEn (S mayúscula).
+#################################################################
+
+#################################################################
+### QUÉ EDITAR / QUÉ NO EDITAR (PARA EVITAR CAOS)
+###
+### SE EDITA (equipo de anotación):
+### - rdfs:label (obligatorio)
+### - :descripcionBreve (obligatorio en entidades principales)
+### - :descripcionEtnografica (obligatorio en Nivel A)
+### - :fuenteTexto (obligatorio en Nivel A)
+### - :codigoRecurso, :rutaArchivo, :fechaCaptura (en recursos)
+### - relaciones entre individuos (documentaA, incluyeEvento, SeCelebraEn, etc.)
+### - geo:lat / geo:long en lugares (cuando haya dato)
+###
+### SE EDITA CON CUIDADO (equipo técnico):
+### - definiciones de clases
+### - domain/range de propiedades
+### - creación de nuevas propiedades
+###
+### NO SE EDITA SIN ACUERDO DEL EQUIPO (congelado):
+### - nombres de propiedades ya usadas (rompe scripts y consistencia)
+### - el patrón de códigos de recursos
+### - el significado de A/B/C en :nivelEmbeddings
+#################################################################
+
+#################################################################
+### DEFINITION OF DONE (DoD) POR NIVEL A/B/C
+###
+### OBJETIVO:
+### - Nivel A: siempre entra a embeddings y al RAG con texto de calidad.
+### - Nivel B: útil para contexto; puede entrar a embeddings si aporta.
+### - Nivel C: estructura/técnico; NO debe generar embeddings ni aparecer en respuestas.
+###
+### NIVEL A (CENTRAL)
+### “Si pregunto en lenguaje natural, debería salir en la respuesta”.
+### Ejemplos: Festividades, Entidades veneradas, lugares centrales, eventos clave,
+### recursos mediales importantes, personajes rituales clave.
+###
+### DoD mínimo (obligatorio):
+### - rdfs:label
+### - :descripcionBreve
+### - :descripcionEtnografica
+### - :fuenteTexto
+### - relaciones clave (según el tipo)
+###   * Festividad: :SeCelebraEn (+ ideal :incluyeEvento)
+###   * EventoRitual: :estaEnLugar (+ opcional :ocurreDurante)
+###   * Lugar: (si aplica) geo:lat geo:long
+###   * RecursoMedial: :codigoRecurso :rutaArchivo :fechaCaptura :documentaA
+###
+### NIVEL B (CONTEXTUAL)
+### “Enriquece, pero rara vez es protagonista”.
+### Ejemplos: comunidades, comparsas específicas, lugares de paso, eventos secundarios.
+###
+### DoD mínimo:
+### - rdfs:label
+### - :descripcionBreve
+### - al menos 1 relación hacia un nodo A (para no quedar huérfano)
+### Opcional:
+### - :descripcionEtnografica si hay buen material
+###
+### ⚪ NIVEL C (ESTRUCTURAL / TÉCNICO)
+### “Ordena el grafo, pero no quiero que el LLM hable de esto”.
+### Ejemplos: clases, nodos puente técnicos, tiempos genéricos sin contenido.
+###
+### DoD mínimo:
+### - rdfs:label
+### Opcional:
+### - rdfs:comment técnico
+###
+### REGLA:
+### - Nivel C NO genera embeddings.
+#################################################################
+
+
+#################################################################
+### PROPIEDADES DE ANOTACIÓN
+### Sirven SOLO para texto descriptivo.
+### Estas propiedades alimentan los embeddings del RAG.
+#################################################################
+
+:descripcionBreve a owl:AnnotationProperty ;
+  rdfs:label "Descripción breve"@es ;
+  rdfs:comment "Definición corta (1–2 frases). Obligatoria para entidades principales."@es .
+
+:descripcionEtnografica a owl:AnnotationProperty ;
+  rdfs:label "Descripción etnográfica"@es ;
+  rdfs:comment "Descripción ampliada (3–6 frases). Obligatoria para Nivel A."@es .
+
+:fuenteTexto a owl:AnnotationProperty ;
+  rdfs:label "Fuente del texto"@es ;
+  rdfs:comment "Origen del texto: campo, archivo, entrevista, documento, etc."@es .
+
+:nivelEmbeddings a owl:AnnotationProperty ;
+  rdfs:label "Nivel de embeddings"@es ;
+  rdfs:comment "Clasificación para embeddings y RAG: A = entidades centrales (si faltan, el sistema no entiende el dominio); B = entidades contextuales (aportan contexto, pero no son protagonistas); C = entidades estructurales o técnicas (ordenan el grafo y no deben aparecer en respuestas ni generar embeddings)."@es .
+
+:codigoRecurso a owl:AnnotationProperty ;
+  rdfs:label "Código de recurso"@es ;
+  rdfs:comment "Identificador estable para fotos, videos, audios y documentos."@es .
+
+:rutaArchivo a owl:AnnotationProperty ;
+  rdfs:label "Ruta de archivo"@es ;
+  rdfs:comment "Ruta local o URL donde se encuentra el recurso."@es .
+
+:nombreAlternativo a owl:AnnotationProperty ;
+  rdfs:label "nombre alternativo"@es ;
+  rdfs:comment "Variantes de nombre (locales, regionales o históricas) para la misma entidad. No crea entidades nuevas: solo alias para búsqueda y RAG."@es .
+
+#################################################################
+### (NUEVO) PROPIEDADES DE DATOS
+### Valores simples (fechas, números).
+#################################################################
+
+:fechaCaptura a owl:DatatypeProperty ;
+  rdfs:domain :RecursoMedial ;
+  rdfs:range xsd:date ;
+  rdfs:label "fecha de captura"@es ;
+  rdfs:comment "Fecha (ISO) en que se capturó el recurso. Ej: 2025-06-17."@es .
+
+#################################################################
+### CLASES
+### Una clase define un tipo general de entidad.
+### Ejemplo: Festividad, Lugar, EventoRitual.
+#################################################################
+
+:Festividad a owl:Class ;
+  rdfs:label "Festividad"@es ;
+  rdfs:comment "Celebración ritual de carácter anual o periódico."@es .
+
+:EventoRitual a owl:Class ;
+  rdfs:label "Evento ritual"@es ;
+  rdfs:comment "Actividad concreta que ocurre dentro de una festividad."@es .
+
+:Danza a owl:Class ;
+  rdfs:label "Danza ritual"@es ;
+  rdfs:comment "Práctica ritual codificada (coreografía, vestimenta, música y roles) que se ejecuta dentro de una festividad. No es un evento puntual: puede aparecer en varios eventos y años."@es .
+
+:PersonajeRitual a owl:Class ;
+  rdfs:label "Personaje ritual"@es ;
+  rdfs:comment "Figura simbólica o rol ritual asociado a una danza o comparsa (p. ej., Ukuku, Qhapaq Qolla). Puede modelarse como individuo o como clase, según el nivel de detalle."@es .
+
+:Procesion a owl:Class ;
+  rdfs:subClassOf :EventoRitual ;
+  rdfs:label "Procesión"@es ;
+  rdfs:comment "Evento ritual de desplazamiento colectivo."@es .
+
+:TiempoRitual a owl:Class ;
+  rdfs:label "Tiempo ritual"@es ;
+  rdfs:comment "Categoría temporal significativa en el ritual."@es .
+
+:SegmentoRitual a owl:Class ;
+  rdfs:subClassOf :TiempoRitual ;
+  rdfs:label "Segmento ritual"@es ;
+  rdfs:comment "Franja temporal concreta (ej. alba, noche, víspera). Usar con cuidado: no es lo mismo que un evento."@es .
+
+:Comunidad a owl:Class ;
+  rdfs:label "Comunidad"@es ;
+  rdfs:comment "Colectivo social vinculado a una festividad."@es .
+
+:Lugar a owl:Class ;
+  rdfs:label "Lugar"@es ;
+  rdfs:comment "Espacio geográfico o construido."@es .
+
+:Ruta a owl:Class ;
+  rdfs:subClassOf :Lugar ;
+  rdfs:label "Ruta"@es ;
+  rdfs:comment "Trayecto o camino usado en desplazamientos rituales (modelado como Lugar para reutilizar :estaEnLugar y :documentaA)."@es .
+
+:Localidad a owl:Class ;
+  rdfs:subClassOf :Lugar ;
+  rdfs:label "Localidad"@es .
+
+:Santuario a owl:Class ;
+  rdfs:subClassOf :Lugar ;
+  rdfs:label "Santuario"@es .
+
+:Iglesia a owl:Class ;
+  rdfs:subClassOf :Lugar ;
+  rdfs:label "Iglesia"@es .
+
+:LugarRitual a owl:Class ;
+  rdfs:subClassOf :Lugar ;
+  rdfs:label "Lugar ritual"@es ;
+  rdfs:comment "Lugar asociado de manera directa a prácticas rituales o devocionales dentro de una festividad (sin describir el acto)."@es .
+
+:LugarDePaso a owl:Class ;
+  rdfs:subClassOf :Lugar ;
+  rdfs:label "Lugar de paso"@es .
+
+### Subtipo útil para precisión
+:Glaciar a owl:Class ;
+  rdfs:subClassOf :Lugar ;
+  rdfs:label "Glaciar"@es ;
+  rdfs:comment "Lugar natural de hielo (p. ej. Colque Punku)."@es .
+
+:EntidadVenerada a owl:Class ;
+  rdfs:label "Entidad venerada"@es ;
+  rdfs:comment "Figura sagrada central de una festividad."@es .
+
+:RecursoMedial a owl:Class ;
+  rdfs:label "Recurso medial"@es ;
+  rdfs:comment "Material audiovisual o textual que documenta la festividad."@es .
+
+:Foto a owl:Class ; rdfs:subClassOf :RecursoMedial .
+:Video a owl:Class ; rdfs:subClassOf :RecursoMedial .
+:Audio a owl:Class ; rdfs:subClassOf :RecursoMedial .
+:DocumentoTexto a owl:Class ; rdfs:subClassOf :RecursoMedial .
+
+:Lengua a owl:Class ;
+  rdfs:label "Lengua"@es ;
+  rdfs:comment "Lengua natural usada para etiquetas, nombres alternativos y glosario."@es .
+
+:ConceptoQuechua a owl:Class ;
+  rdfs:label "Concepto en quechua"@es ;
+  rdfs:comment "Término o concepto en lengua quechua con significado ritual, social o territorial."@es .
+
+:tieneLengua a owl:ObjectProperty ;
+  rdfs:label "tiene lengua"@es ;
+  rdfs:domain :ConceptoQuechua ;
+  rdfs:range :Lengua .
+
+:tieneVariante a owl:DatatypeProperty ;
+  rdfs:label "tiene variante"@es ;
+  rdfs:domain :ConceptoQuechua ;
+  rdfs:range rdf:langString ;
+  rdfs:comment "Variante nominal (p.ej., 'Ukumari', 'Ukamari'). Usar con tag de idioma cuando aplique."@es .
+
+:tieneConceptoLinguistico a owl:ObjectProperty ;
+  rdfs:label "tiene concepto lingüístico"@es ;
+  rdfs:domain owl:Thing ;
+  rdfs:range :ConceptoQuechua ;
+  rdfs:comment "Vincula una entidad del grafo con un concepto del glosario (p.ej., personaje, lugar, evento)."@es .
+
+:Quechua a :Lengua ;
+  rdfs:label "Quechua"@es ;
+  rdfs:label "Runa simi"@qu ;
+  :nivelEmbeddings "B" .
+
+:NacionRitual a owl:Class ;
+  rdfs:label "Nación ritual"@es .
+
+:ObjetoRitual a owl:Class ;
+  rdfs:label "Objeto ritual"@es .
+
+:CantoRitual a owl:Class ;
+  rdfs:label "Canto ritual"@es .
+
+:Capilla a owl:Class ;
+  rdfs:label "Capilla"@es .
+
+#################################################################
+### PROPIEDADES DE OBJETO
+### Definen relaciones entre entidades.
+#################################################################
+
+:conduceA a owl:ObjectProperty ;
+  rdfs:label "conduce a"@es .
+
+:conformadaPor a owl:ObjectProperty ;
+  rdfs:label "conformada por"@es .
+
+:incluyeDistrito a owl:ObjectProperty ;
+  rdfs:label "incluye distrito"@es .
+
+:incluyeComunidad a owl:ObjectProperty ;
+  rdfs:label "incluye comunidad"@es .
+
+:incluyeParada a owl:ObjectProperty ;
+  rdfs:label "incluye parada"@es .
+
+:incluyeObjetoRitual a owl:ObjectProperty ;
+  rdfs:label "incluye objeto ritual"@es .
+
+:seDejaImagenEn a owl:ObjectProperty ;
+  rdfs:label "se deja imagen en"@es .
+
+:seCustodiaEn a owl:ObjectProperty ;
+  rdfs:label "se custodia en"@es .
+
+:seCantaEn a owl:ObjectProperty ;
+  rdfs:label "se canta en"@es .
+
+:usaNombreLocal a owl:ObjectProperty ;
+  rdfs:label "usa nombre local"@es .
+
+:esVeneradaEn a owl:ObjectProperty ;
+  rdfs:domain :EntidadVenerada ;
+  rdfs:range  :EventoRitual .
+
+:tieneLugarDeVeneracion a owl:ObjectProperty ;
+  rdfs:domain :EntidadVenerada ;
+  rdfs:range  :LugarRitual .
+
+:SeCelebraEn a owl:ObjectProperty ;
+  rdfs:domain :Festividad ;
+  rdfs:range :Lugar ;
+  rdfs:label "se celebra en"@es .
+
+:incluyeEvento a owl:ObjectProperty ;
+  rdfs:domain :Festividad ;
+  rdfs:range :EventoRitual ;
+  rdfs:label "incluye evento"@es .
+
+:seInterpretaEnFestividad a owl:ObjectProperty ;
+  rdfs:domain :Danza ;
+  rdfs:range :Festividad ;
+  rdfs:label "se interpreta en festividad"@es ;
+  rdfs:comment "Relaciona una danza con la(s) festividad(es) donde se interpreta."@es .
+
+:seEjecutaDurante a owl:ObjectProperty ;
+  rdfs:domain :Danza ;
+  rdfs:range :EventoRitual ;
+  rdfs:label "se ejecuta durante"@es ;
+  rdfs:comment "Relaciona una danza con un evento ritual concreto (p. ej. bajada del glaciar, entrada, procesión)."@es .
+
+:incluyePersonaje a owl:ObjectProperty ;
+  rdfs:domain :Danza ;
+  rdfs:range :PersonajeRitual ;
+  rdfs:label "incluye personaje"@es ;
+  rdfs:comment "Indica que una danza involucra uno o más personajes rituales."@es .
+
+:ocurreDurante a owl:ObjectProperty ;
+  rdfs:domain :EventoRitual ;
+  rdfs:range :TiempoRitual ;
+  rdfs:label "ocurre durante"@es .
+
+:celebra a owl:ObjectProperty ;
+  rdfs:domain :Comunidad ;
+  rdfs:range :Festividad ;
+  rdfs:label "celebra"@es ;
+  rdfs:comment "Indica que una comunidad participa/organiza/celebra una festividad (relación social, no geográfica)."@es .
+
+:estaEnLugar a owl:ObjectProperty ;
+  rdfs:domain :EventoRitual ;
+  rdfs:range :Lugar ;
+  rdfs:label "está en lugar"@es .
+
+:ubicadoEn a owl:ObjectProperty ;
+  rdfs:domain :Lugar ;
+  rdfs:range :Lugar ;
+  rdfs:label "ubicado en"@es ;
+  rdfs:comment "Relaciona un lugar con otro lugar que lo contiene o contextualiza (p.ej. Colque Punku ubicado en Sinakara; Iglesia ubicada en Paucartambo)."@es .
+
+:conduceA a owl:ObjectProperty ;
+  rdfs:label "conduce a"@es ;
+  rdfs:comment "Relaciona una ruta o trayecto con el lugar o evento ritual al que conduce."@es ;
+  rdfs:domain :Ruta ;
+  rdfs:range :Lugar .
+
+:relacionadoCon a owl:ObjectProperty ;
+  rdfs:domain :Comunidad ;
+  rdfs:range :Festividad ;
+  rdfs:label "relacionado con"@es .
+
+:tieneRecursoMedial a owl:ObjectProperty ;
+  rdfs:domain :Festividad ;
+  rdfs:range :RecursoMedial ;
+  rdfs:label "tiene recurso medial"@es .
+
+:documentaA a owl:ObjectProperty ;
+  rdfs:domain :RecursoMedial ;
+  rdfs:range owl:Thing ;
+  rdfs:label "documenta a"@es .
+
+:participaEnFestividad a owl:ObjectProperty ;
+  rdfs:label "participa en festividad"@es ;
+  rdfs:domain :NacionRitual ;
+  rdfs:range :Festividad .
+
+:veneraEntidad a owl:ObjectProperty ;
+  rdfs:label "venera entidad"@es ;
+  rdfs:domain :NacionRitual ;
+  rdfs:range :EntidadVenerada .
+
+:participaNacion a owl:ObjectProperty ;
+  rdfs:label "participa nación"@es ;
+  rdfs:domain :EventoRitual ;
+  rdfs:range :NacionRitual .
+
+############################################################
+### INDIVIDUOS #############################################
+### Un individuo es una entidad concreta del mundo real. ###
+############################################################
+
+###############
+### LUGARES ###
+###############
+
+:Ruta24h_Santuario_IntiAlabado a :Ruta ;
+  rdfs:label "Ruta 24h: santuario → Inti Alabado"@es ;
+  :descripcionBreve "Trayecto de caminata en alta montaña que parte del santuario del Señor de Qoyllur Rit’i y conduce al lugar donde se realiza el Inti Alabado. En esta ruta avanzan peregrinos y grupos rituales en filas, con pausas de descanso en el camino."@es ;
+  :nivelEmbeddings "B" ;
+  rdfs:comment "El punto de llegada del Inti Alabado se asocia a Tayancani (nombre y ubicación a confirmar con fuente local/GPS). El nombre específico del paraje del ritual puede diferir del nombre del pueblo."@es .
+
+:LugarIntiAlabado a :LugarDePaso ;
+  rdfs:label "Lugar de Inti Alabado (nombre por confirmar)"@es ;
+  :descripcionBreve "Lugar de la ruta donde se realiza el evento ritual de Inti Alabado."@es ;
+  :nivelEmbeddings "B" ;
+   :ubicadoEn :Tayancani ;
+  rdfs:comment "Completar nombre local y coordenadas cuando se confirme."@es .
+
+:Paucartambo a :Localidad ;
+  rdfs:label "Paucartambo"@es ;
+  :descripcionBreve "Localidad andina del Cusco con fuerte tradición festiva y religiosa."@es ;
+  :descripcionEtnografica "Paucartambo es un pueblo andino con una vida ritual intensa, articulada en torno a festividades como la Virgen del Carmen y su participación regional en la peregrinación al Señor de Qoyllur Rit’i. Funciona como espacio de reunión, organización y partida de danzantes y peregrinos."@es ;
+  :nivelEmbeddings "A" ;
+  geo:lat "-13.3140"^^xsd:decimal ;
+  geo:long "-71.5940"^^xsd:decimal ;
+  rdfs:comment "Coordenadas aproximadas. Centro urbano."@es .
+
+:Sinakara a :LugarRitual ;
+  rdfs:label "Sinakara"@es ;
+  :descripcionBreve "Área ritual de alta montaña donde se desarrolla la festividad del Señor de Qoyllur Rit’i."@es ;
+  :descripcionEtnografica "Sinakara es una quebrada y territorio ritual temporalmente habitado durante la peregrinación de Qoyllur Rit’i. Alberga el santuario, campamentos y espacios ceremoniales, y estructura la movilidad ritual de los peregrinos."@es ;
+  :nivelEmbeddings "A" ;
+  geo:lat "-13.528333"^^xsd:decimal ;
+  geo:long "-71.233611"^^xsd:decimal ;
+  rdfs:comment "Lat/long aproximado según literatura etnográfica."@es .
+
+
+:ColquePunku a :Glaciar ;
+  rdfs:label "Colque Punku"@es ;
+  :descripcionBreve "Glaciar asociado a rituales de altura durante la peregrinación de Qoyllur Rit’i."@es ;
+  :descripcionEtnografica "Colque Punku constituye un espacio de tránsito y ritualidad de alta montaña. Históricamente fue escenario de ascensos rituales de los ukukus y otros grupos vinculados a prácticas simbólicas relacionadas con el hielo y la montaña."@es ;
+  :ubicadoEn :Sinakara ;
+  :nivelEmbeddings "A" ;
+  geo:lat "-13.519167"^^xsd:decimal ;
+  geo:long "-71.206667"^^xsd:decimal ;
+  rdfs:comment "Coordenadas aproximadas. Uso ritual documentado en literatura antropológica."@es .
+
+
+:SantuarioQoylluriti a :Santuario, :LugarRitual ;
+  rdfs:label "Santuario del Señor de Qoyllur Rit’i"@es ;
+  :descripcionBreve "Santuario de alta montaña donde se concentra la peregrinación anual de Qoyllur Rit’i."@es ;
+  :descripcionEtnografica "El santuario constituye el núcleo simbólico de la peregrinación. En él se realizan misas, procesiones y actos de veneración asociados tanto al cristianismo como a cosmologías andinas preexistentes."@es ;
+  :nivelEmbeddings "A" ;
+  rdfs:comment "Ubicado en el área ritual de Sinakara. Coordenadas exactas no fijadas para evitar confusión con el área amplia."@es .
+
+
+:IglesiaPaucartambo a :Iglesia ;
+  rdfs:label "Iglesia de Paucartambo"@es ;
+  :descripcionBreve "Templo principal de Paucartambo asociado a la festividad de la Virgen del Carmen."@es ;
+  :descripcionEtnografica "Espacio central de ritualidad urbana donde se articulan procesiones, danzas y actos cívico-religiosos durante las festividades locales."@es ;
+  :ubicadoEn :Paucartambo ;
+  :nivelEmbeddings "A" ;
+  geo:lat "-13.3140"^^xsd:decimal ;
+  geo:long "-71.5940"^^xsd:decimal ;
+  rdfs:comment "Se asume centro urbano de Paucartambo."@es .
+
+
+:CementerioPaucartambo a :Lugar ;
+  rdfs:label "Cementerio de Paucartambo"@es ;
+  :descripcionBreve "Espacio funerario vinculado a prácticas de memoria y visitas rituales."@es ;
+  :descripcionEtnografica ""@es ;
+  :ubicadoEn :Paucartambo ;
+  :nivelEmbeddings "B" ;
+  rdfs:comment "Lugar identificado por registro fotográfico. Falta descripción etnográfica detallada."@es .
+
+
+:Ccatcca a :Localidad ;
+  rdfs:label "Ccatcca"@es ;
+  :descripcionBreve "Localidad andina mencionada como punto de paso en la ruta hacia Qoyllur Rit’i."@es ;
+  :descripcionEtnografica ""@es ;
+  :nivelEmbeddings "B" ;
+  rdfs:comment "Localidad referida en crónicas y rutas de peregrinación. Falta caracterización etnográfica."@es .
+
+
+:PlazaCcatcca a :Lugar ;
+  rdfs:label "Plaza de Ccatcca"@es ;
+  :descripcionBreve "Plaza central de Ccatcca usada como punto de parada y reunión."@es ;
+  :descripcionEtnografica ""@es ;
+  :ubicadoEn :Ccatcca ;
+  :nivelEmbeddings "B" ;
+  rdfs:comment "Descripción etnográfica pendiente."@es .
+
+
+:IglesiaSanJuanBautistaCcatcca a :Iglesia ;
+  rdfs:label "Iglesia San Juan Bautista de Ccatcca"@es ;
+  :descripcionBreve "Iglesia principal de la localidad de Ccatcca."@es ;
+  :descripcionEtnografica ""@es ;
+  :ubicadoEn :Ccatcca ;
+  :nivelEmbeddings "B" ;
+  rdfs:comment "Información mínima. Falta fuente específica."@es .
+
+:Mahuayani a :Localidad ;
+  rdfs:label "Mahuayani"@es ;
+  :descripcionBreve "Localidad usada como punto terminal de transporte y comienzo de la caminata hacia el santuario."@es ;
+  :descripcionEtnografica "Mahuayani funciona como estación ritual de transición entre el espacio vehicular y el ascenso a pie hacia Sinakara. Desde aquí parten peregrinos, celadores y danzantes hacia el santuario del Señor de Qoyllur Rit’i."@es ;
+  :nivelEmbeddings "A" ;
+  rdfs:comment "Rol claramente documentado en literatura etnográfica (Brachetti 2002, entre otros). Coordenadas pendientes."@es .
+
+:Tayancani a :Localidad ;
+  rdfs:label "Tayancani (Tayankani)"@es ;
+  :descripcionBreve "Localidad asociada al punto final de la ruta ritual de 24 horas desde el santuario de Qoyllur Rit’i, donde se realiza el rito conocido como Inti Alabado."@es ;
+  :nivelEmbeddings "A" ;
+  geo:lat "-13.6292606"^^xsd:decimal ;
+  geo:long "-71.3616271"^^xsd:decimal ;
+  rdfs:comment "Coordenadas aproximadas tomadas de referencia de mapa. Revisar nombre local (Tayancani/Tayankani) con informantes."@es .
+
+:NacionPaucartambo a :NacionRitual ;
+  rdfs:label "Nación de Paucartambo"@es ;
+  :descripcionBreve "Conjunto ritual que peregrina como nación en Qoyllur Rit’i; integra distritos y comunidades asociadas por tradición."@es ;
+  :nivelEmbeddings "A" ;
+  :relacionadoCon :Paucartambo ;
+  :relacionadoCon :FestividadQoylluriti .
+
+:NacionPaucartambo
+  :relacionadoCon :Paucartambo ;
+  :participaEnFestividad :FestividadQoylluriti ;
+  :participaEnFestividad :FestividadVirgenCarmenPaucartambo ;
+  :veneraEntidad :SenorDeQoyllurRiti ;
+  :veneraEntidad :VirgenDelCarmen ;
+  rdfs:comment "Vínculos agregados para conectar Nación↔Lugar base↔Festividades↔Entidades veneradas. No implica exclusividad ni jerarquía; solo relación documentable."@es .
+
+:Mollomarca a :Localidad ;
+  rdfs:label "Mollomarca"@es ;
+  :descripcionBreve "Sector alto asociado a Paucartambo; origen de participantes de la nación."@es ;
+  :nivelEmbeddings "B" ;
+  :ubicadoEn :Paucartambo ;
+  rdfs:comment "Completar coordenadas/naturaleza administrativa cuando se confirme."@es .
+
+:Challabamba a :Localidad ;
+  rdfs:label "Challabamba"@es ;
+  :descripcionBreve "Distrito asociado a la Nación de Paucartambo; zona baja cercana a la entrada hacia la selva (según testimonio)."@es ;
+  :nivelEmbeddings "B" ;
+  rdfs:comment "Completar coordenadas si se dispone."@es .
+
+:Colquepata a :Localidad ;
+  rdfs:label "Colquepata"@es ;
+  :descripcionBreve "Distrito asociado a la Nación de Paucartambo; referencia de salida hacia Pisac (según testimonio)."@es ;
+  :nivelEmbeddings "B" ;
+  rdfs:comment "Completar coordenadas si se dispone."@es .
+
+:Huancarani a :Localidad ;
+  rdfs:label "Huancarani"@es ;
+  :descripcionBreve "Distrito asociado a Paucartambo; cruce donde se realiza una parada en ruta hacia Ccatcca (según testimonio)."@es ;
+  :nivelEmbeddings "B" ;
+  rdfs:comment "Completar coordenadas si se dispone."@es .
+
+:Caicay a :Localidad ;
+  rdfs:label "Caicay"@es ;
+  :descripcionBreve "Distrito y comunidades campesinas vinculadas a la Nación de Paucartambo (según testimonio)."@es ;
+  :nivelEmbeddings "B" ;
+  rdfs:comment "Completar coordenadas si se dispone."@es .
+
+:Ccapi a :Localidad ;
+  rdfs:label "Ccapi"@es ;
+  :descripcionBreve "Localidad asociada por tradición a la Nación de Paucartambo en el santuario (según testimonio)."@es ;
+  :nivelEmbeddings "B" ;
+  rdfs:comment "Geográficamente en Quispicanchis según testimonio; confirmar."@es .
+
+:Ccarhuayo a :Localidad ;
+  rdfs:label "Ccarhuayo"@es ;
+  :descripcionBreve "Localidad asociada por tradición a la Nación de Paucartambo en el santuario (según testimonio)."@es ;
+  :nivelEmbeddings "B" ;
+  rdfs:comment "Geográficamente en Quispicanchis según testimonio; confirmar."@es .
+
+:NacionPaucartambo
+  :incluyeDistrito :Paucartambo ;
+  :incluyeComunidad :Mollomarca ;
+  :incluyeDistrito :Challabamba ;
+  :incluyeDistrito :Colquepata ;
+  :incluyeDistrito :Huancarani ;
+  :incluyeDistrito :Caicay ;
+  :incluyeDistrito :Ccapi ;
+  :incluyeDistrito :Ccarhuayo .
+
+:Tayancani a :Localidad ;
+  rdfs:label "Tayancani"@es ;
+  :descripcionBreve "Localidad asociada al cierre de la caminata de 24 horas y al espacio ritual del Inti Alabado (según testimonio)."@es ;
+  :nivelEmbeddings "B" ;
+  rdfs:comment "Completar coordenadas cuando se confirme."@es .
+
+:CapillaTayancani a :Capilla ;
+  rdfs:label "Capilla de Tayancani"@es ;
+  :descripcionBreve "Capilla donde se deja la imagen durante la secuencia ritual vinculada a Tayancani (según testimonio)."@es ;
+  :nivelEmbeddings "B" ;
+  :ubicadoEn :Tayancani ;
+  rdfs:comment "Completar nombre local de la capilla si aplica."@es .
+
+:LugarIntiAlabado
+  :ubicadoEn :Tayancani ;
+  :seDejaImagenEn :CapillaTayancani .
+
+:Ruta24h_Santuario_IntiAlabado
+  :conduceA :LugarIntiAlabado ;
+  :usaNombreLocal :Lomada ;
+  :usaNombreLocal :LomanPureq ;
+  rdfs:comment "Nombre local reportado: 'lomada' / 'loman pureq' (Jacho Martínez, 02/02/2026)."@es .
+
+:Lomada a :Ruta ;
+  rdfs:label "Lomada"@es ;
+  :nivelEmbeddings "C" ;
+  rdfs:comment "Nombre local de la caminata de 24h (Jacho Martínez, 02/02/2026)."@es .
+
+:LomanPureq a :Ruta ;
+  rdfs:label "Loman pureq"@es ;
+  :nivelEmbeddings "C" ;
+  rdfs:comment "Variante de nombre local de la caminata de 24h (Jacho Martínez, 02/02/2026)."@es .
+
+
+### Entidades veneradas
+
+:SenorDeQoyllurRiti a :EntidadVenerada ;
+  rdfs:label "Señor de Qoyllur Rit’i"@es ;
+  :descripcionBreve "Entidad sagrada venerada en la peregrinación andina de Qoyllur Rit’i."@es ;
+  :descripcionEtnografica "El Señor de Qoyllur Rit’i es la imagen sagrada en torno a la cual se organiza la peregrinación anual en la zona de Sinakara. Su veneración convoca a comunidades y naciones andinas que participan mediante caminatas rituales, danzas y ceremonias colectivas. La presencia de esta entidad estructura los recorridos, los tiempos rituales y los actos religiosos que se desarrollan en el santuario."@es ;  
+  :nivelEmbeddings "A" ;
+  :tieneLugarDeVeneracion :SantuarioQoylluriti .
+
+:VirgenDelCarmen a :EntidadVenerada ;
+  rdfs:label "Virgen del Carmen"@es ;
+  :descripcionBreve "Imagen mariana venerada en la festividad de la Virgen del Carmen en Paucartambo."@es ;
+  :descripcionEtnografica "La Virgen del Carmen es la imagen central de la festividad de Paucartambo y concentra las prácticas religiosas y celebratorias del pueblo. Su veneración se expresa mediante procesiones, danzas y actos colectivos que articulan la vida ritual y social de la localidad. La presencia de esta imagen organiza los recorridos festivos y las actividades que se desarrollan en torno a la iglesia y el espacio urbano."@es ;
+  :fuenteTexto "Observación de campo y registro etnográfico propio."@es ;
+  :nivelEmbeddings "A" ;
+  :tieneLugarDeVeneracion :IglesiaPaucartambo ;
+  :tieneLugarDeVeneracion :Paucartambo .
+
+:SenorDeTayancani a :EntidadVenerada ;
+  rdfs:label "Señor de Tayancani"@es ;
+  :descripcionBreve "Imagen venerada asociada a Tayancani y a la secuencia ritual posterior al santuario (según testimonio)."@es ;
+  :nivelEmbeddings "B" ;
+  :tieneLugarDeVeneracion :CapillaTayancani .
+
+:SenorDeOcongate a :EntidadVenerada ;
+  rdfs:label "Señor de Ocongate"@es ;
+  :descripcionBreve "Imagen venerada vinculada a Ocongate; se asocia a la custodia de la capilla de Tayancani durante el ciclo ritual (según testimonio)."@es ;
+  :nivelEmbeddings "B" ;
+  :seCustodiaEn :CapillaTayancani ;
+  rdfs:comment "Relación descrita como tradición católica de custodia durante el ciclo (Jacho Martínez, 02/02/2026)."@es .
+
+### Festividades
+
+:FestividadQoylluriti a :Festividad ;
+  rdfs:label "Festividad del Señor de Qoyllur Rit’i"@es ;
+  :descripcionBreve "Peregrinación andina de carácter ritual que se realiza anualmente en el área de Sinakara en honor al Señor de Qoyllur Rit’i."@es ;
+  :descripcionEtnografica "La festividad del Señor de Qoyllur Rit’i es una de las peregrinaciones rituales más importantes de los Andes del sur del Perú. Reúne a comunidades y naciones de distintas regiones que se desplazan hacia el área ritual de Sinakara, incluyendo el santuario y el glaciar Colque Punku. Durante la festividad se desarrollan caminatas rituales, danzas, actos de veneración y eventos colectivos que articulan prácticas religiosas, identidades locales y relaciones con el paisaje sagrado de montaña."@es ;
+  :fuenteTexto "Observación de campo, registro etnográfico propio y conocimiento local compartido por participantes de la festividad."@es ;
+  :nivelEmbeddings "A" ;
+  :SeCelebraEn :SantuarioQoylluriti ;
+  :SeCelebraEn :ColquePunku ;
+  :tieneConceptoLinguistico :QConcepto_QoyllurRiti ;
+  :SeCelebraEn :Sinakara .
+
+:FestividadVirgenCarmenPaucartambo a :Festividad ;
+  rdfs:label "Festividad de la Virgen del Carmen de Paucartambo"@es ;
+  :descripcionBreve "Fiesta patronal de Paucartambo dedicada a la Virgen del Carmen, con celebraciones religiosas y participación de comparsas y danzas."@es ;
+  :descripcionEtnografica "La Festividad de la Virgen del Carmen de Paucartambo es la celebración patronal más importante de la localidad y convoca a población local, visitantes y participantes organizados en comparsas y danzas. La devoción se expresa en ceremonias y actos de veneración vinculados a la iglesia del pueblo y a espacios públicos de Paucartambo. En el transcurso de la festividad se articulan prácticas religiosas, organización comunal y expresiones festivas que forman parte de la memoria e identidad local."@es ;
+  :fuenteTexto "Descripción preliminar basada en conocimiento local y observación general; ajustar y validar con participantes y fuentes comunitarias."@es ;
+  :nivelEmbeddings "A" ;
+  :SeCelebraEn :Paucartambo ;
+  :SeCelebraEn :IglesiaPaucartambo .
+
+
+### Comunidad
+
+:ComunidadPaucartambo a :Comunidad ;
+  rdfs:label "Actores locales de Paucartambo"@es ;
+  :descripcionBreve "Conjunto de organizaciones y actores locales que, según la festividad, coordinan danzas, actividades religiosas y aspectos logísticos en Paucartambo."@es ;
+  :descripcionEtnografica "En Paucartambo, la organización de las fiestas suele involucrar a agrupaciones de danzas y sus directivas, comités o cargos festivos, la iglesia y autoridades locales. La forma exacta de coordinación varía según el año y el evento, pero normalmente incluye acuerdos sobre recorridos, horarios, participación de comparsas y cuidado de espacios centrales como la iglesia y la plaza."@es ;
+  :fuenteTexto "Descripción preliminar para anotación y RAG; revisar!"@es ;
+  :nivelEmbeddings "A" ;
+  :relacionadoCon :FestividadVirgenCarmenPaucartambo ;
+  :relacionadoCon :FestividadQoylluriti ;
+  :relacionadoCon :Paucartambo .
+
+### Personas o danzas
+
+:Ukuku a :PersonajeRitual ;
+  rdfs:label "Ukuku"@es ;
+  :descripcionBreve "Personaje ritual central de la peregrinación de Qoyllur Rit’i, encargado del orden, la vigilancia y el acompañamiento de las danzas durante los momentos clave del ritual."@es ;
+  :descripcionEtnografica "El Ukuku, también conocido como Ukamari o Pablito, es un personaje ritual presente en todas las comparsas de la peregrinación de Qoyllur Rit’i. Se trata generalmente de jóvenes adultos que cumplen funciones de control interno, disciplina y apoyo logístico, pero que al mismo tiempo encarnan un rol burlesco y transgresor. Los Ukuku participan en acciones rituales de alta intensidad, como la subida nocturna al glaciar y el descenso al amanecer portando las cruces de las naciones. En distintas interpretaciones etnográficas, el Ukuku ha sido asociado tanto a figuras animales (oso, alpaca) como a seres liminales entre lo humano y lo no humano, combinando fuerza, sacrificio, humor y autoridad ritual."@es ;
+  :fuenteTexto "Salas Carreño, G. (2014). The Glacier, the Rock, the Image: Emotional Experience and Semiotic Diversity at the Quyllurit’i Pilgrimage."@es ;
+  :nombreAlternativo "Ukamari"@es ;
+  :nombreAlternativo "Pablito"@es ;
+  :tieneConceptoLinguistico :QConcepto_Ukuku ;
+  :nivelEmbeddings "A" .
+
+:Ukumari a :PersonajeRitual ;
+  rdfs:label "Ukumari"@es ;
+  owl:sameAs :Ukuku ;
+  rdfs:comment "Término equivalente a Ukuku (testimonio Jacho Martínez, 2026)."@es .
+
+:Ukuku rdfs:comment "También denominado 'Ukumari' (equivalentes; Jacho Martínez, 02/02/2026)."@es .
+
+:DanzaUkuku a :Danza ;
+  rdfs:label "Danza del Ukuku"@es ;
+  :descripcionBreve "Danza ritual ejecutada por los Ukuku durante la peregrinación de Qoyllur Rit’i, presente en distintos eventos y momentos clave del ciclo festivo."@es ;
+  :descripcionEtnografica "La Danza del Ukuku no se organiza como una coreografía escénica fija, sino como una práctica ritual distribuida a lo largo de la peregrinación de Qoyllur Rit’i. Los Ukuku se desplazan, interactúan y ejecutan movimientos corporales asociados al control del grupo, la vigilancia del orden ritual y la participación en acciones colectivas de alto contenido simbólico, como la subida y bajada del glaciar. La danza se expresa a través del uso del traje, la máscara, los desplazamientos rítmicos y las interacciones con otros danzantes y peregrinos. Desde una perspectiva etnográfica, esta práctica combina elementos de disciplina, juego, sacrificio y liminalidad, y forma parte central de la experiencia emocional y semiótica de la peregrinación."@es ;
+  :fuenteTexto "Salas Carreño, G. (2014). The Glacier, the Rock, the Image: Emotional Experience and Semiotic Diversity at the Quyllurit’i Pilgrimage."@es ;
+  :nivelEmbeddings "A" ;
+  :seInterpretaEnFestividad :FestividadQoylluriti ;
+  :incluyePersonaje :Ukuku .
+
+########################
+### (C) GLOSARIO QUECHUA (instancias)
+########################
+
+:QConcepto_QoyllurRiti a :ConceptoQuechua ;
+  rdfs:label "Qoyllur Rit’i"@qu ;
+  rdfs:label "Qoyllur Rit’i"@es ;
+  :descripcionBreve "Nombre ritual de la festividad y del Señor venerado, asociado a la peregrinación en Sinakara."@es ;
+  :tieneLengua :Quechua ;
+  :nivelEmbeddings "A" .
+
+:QConcepto_Ukuku a :ConceptoQuechua ;
+  rdfs:label "Ukuku"@qu ;
+  rdfs:label "Ukuku"@es ;
+  :descripcionBreve "Nombre del personaje ritual presente en Qoyllur Rit’i; el término se usa para referir al danzante y su rol dentro del orden ritual."@es ;
+  :tieneLengua :Quechua ;
+  :tieneVariante "Ukumari"@qu ;
+  :tieneVariante "Ukamari"@qu ;
+  :tieneVariante "Pablito"@es ;
+  :nivelEmbeddings "A" .
+
+:QConcepto_Sinakara a :ConceptoQuechua ;
+  rdfs:label "Sinakara"@qu ;
+  rdfs:label "Sinakara"@es ;
+  :descripcionBreve "Nombre del territorio ritual de alta montaña donde se instala el santuario y se desarrollan campamentos y ceremonias."@es ;
+  :tieneLengua :Quechua ;
+  :nivelEmbeddings "A" .
+
+:QConcepto_ColquePunku a :ConceptoQuechua ;
+  rdfs:label "Colque Punku"@qu ;
+  rdfs:label "Colque Punku"@es ;
+  :descripcionBreve "Nombre del glaciar y su entorno ritual asociado a ascensos y descensos colectivos durante la festividad."@es ;
+  :tieneLengua :Quechua ;
+  :nivelEmbeddings "A" .
+
+########################
+### (EVENTOS RITUALES) — ACTUALIZADO (SIN CAMBIAR TUS URIs)
+### Pega este bloque REEMPLAZANDO el bloque actual de eventos.
+### Cambios clave:
+### - Se agregan vínculos a :NacionPaucartambo donde corresponde (según testimonio Jacho).
+### - Se agregan :estaEnLugar que faltaban (p.ej. :PasoCasaPrioste_2025_06_16).
+### - Se agrega evento explícito :MisaUkukus_2025 (anual, exclusivo) y :SubidaColquePunku_2025 (lunes noche).
+### - Se agrega :Lomada24h_2025 como nombre local de la caminata 24h (“lomada / loman pureq”).
+### - Se agrega :TrasladoImagenSenorOcongate_Tayancani_2025 y :DejaImagenEnCapillaTayancani_2025.
+### - Se refuerza Inti Alabado como lugar (ya lo tienes) y como evento (ya lo tienes).
+########################
+
+:BajadaColquePunku_2025 a :EventoRitual ;
+  rdfs:label "Bajada desde el glaciar Colque Punku (2025)"@es ;
+  :descripcionBreve "Evento ritual de descenso desde el glaciar Colque Punku hacia el área ritual de Sinakara durante la peregrinación de Qoyllur Rit’i."@es ;
+  :descripcionEtnografica "La bajada desde el glaciar Colque Punku es un evento ritual colectivo en el que los Ukuku y otros participantes descienden desde la zona glaciar hacia los sectores inferiores de Sinakara. Durante este recorrido se observan grupos provenientes de distintas naciones, identificables por variaciones en el traje y los colores, que avanzan en filas sobre un terreno rocoso y, en algunos tramos, cubierto de nieve. El evento no consiste en una procesión formal, sino en un desplazamiento ritualizado que marca la transición entre el espacio glaciar y el resto del circuito ceremonial de Qoyllur Rit’i."@es ;
+  :fuenteTexto "Registro etnográfico y fotográfico de campo, peregrinación 2025."@es ;
+  :nivelEmbeddings "B" ;
+  :estaEnLugar :ColquePunku ;
+  :estaEnLugar :Sinakara ;
+  :participaNacion :NacionPaucartambo ;
+  rdfs:comment "Si se desea mayor precisión temporal, puede vincularse a un SegmentoRitual (por ejemplo, mañana), siempre que esté documentado."@es .
+
+:FestividadQoylluriti :incluyeEvento :BajadaColquePunku_2025 .
+
+
+:EventoPrevioPeregrinaje_Paucartambo_2025_06_15 a :EventoRitual ;
+  rdfs:label "Encuentro de Ukuku frente a la iglesia en Paucartambo (15 junio 2025)"@es ;
+  :descripcionBreve "Encuentro de Ukuku/Ukumari frente a la iglesia en Paucartambo, previo a la salida hacia Mahuayani (según anotación del equipo)."@es ;
+  :nivelEmbeddings "B" ;
+  :estaEnLugar :IglesiaPaucartambo ;
+  :estaEnLugar :Paucartambo ;
+  :participaNacion :NacionPaucartambo ;
+  rdfs:comment "La anotación lo sitúa como actividad previa a la partida hacia Mahuayani en el marco del peregrinaje a Qoyllur Rit’i."@es .
+
+:FestividadQoylluriti :incluyeEvento :EventoPrevioPeregrinaje_Paucartambo_2025_06_15 .
+
+
+:RomeriaPaucartambo_2025_06_15 a :EventoRitual ;
+  rdfs:label "Romería en el cementerio de Paucartambo (15 junio 2025)"@es ;
+  :descripcionBreve "Visita ritual al cementerio de Paucartambo para honrar a hermanos antiguos fallecidos (romería), previa a la peregrinación."@es ;
+  :nivelEmbeddings "B" ;
+  :estaEnLugar :CementerioPaucartambo ;
+  :estaEnLugar :Paucartambo ;
+  :participaNacion :NacionPaucartambo ;
+  rdfs:comment "En la anotación se menciona vestimenta (camisa blanca, pantalón negro, waraka) y cantos; evitar generalizaciones no observadas."@es .
+
+:FestividadQoylluriti :incluyeEvento :RomeriaPaucartambo_2025_06_15 .
+
+
+:ParadaNocturna_Ccatcca_2025_06_15 a :EventoRitual ;
+  rdfs:label "Parada nocturna de peregrinos en Ccatcca (15 junio 2025)"@es ;
+  :descripcionBreve "Parada nocturna tradicional en Ccatcca (entre Paucartambo y Mahuayani), con reunión pública y consumo de alimentos/bebidas calientes."@es ;
+  :nivelEmbeddings "B" ;
+  :estaEnLugar :Ccatcca ;
+  :participaNacion :NacionPaucartambo ;
+  rdfs:comment "Según testimonio, la parada nocturna en Ccatcca es una práctica tradicional recurrente."@es .
+
+:FestividadQoylluriti :incluyeEvento :ParadaNocturna_Ccatcca_2025_06_15 .
+
+
+:Caminata_Mahuayani_Santuario_2025 a :EventoRitual ;
+  rdfs:label "Caminata desde Mahuayani hacia el santuario (2025)"@es ;
+  :descripcionBreve "Desplazamiento de peregrinos desde Mahuayani hacia el santuario del Señor de Qoyllur Rit’i."@es ;
+  :nivelEmbeddings "B" ;
+  :estaEnLugar :Mahuayani ;
+  :estaEnLugar :SantuarioQoylluriti ;
+  :participaNacion :NacionPaucartambo .
+
+:FestividadQoylluriti :incluyeEvento :Caminata_Mahuayani_Santuario_2025 .
+
+
+:PasoCasaPrioste_2025_06_16 a :EventoRitual ;
+  rdfs:label "Paso por la casa del prioste (16 junio 2025)"@es ;
+  :descripcionBreve "Parada/paso por la casa del prioste, donde se recibe a la nación en tránsito hacia el santuario."@es ;
+  :nivelEmbeddings "B" ;
+  :estaEnLugar :Mahuayani ;
+  :participaNacion :NacionPaucartambo ;
+  rdfs:comment "Según testimonio, la visita al prioste ocurre en ruta antes de iniciar la caminata; completar con el lugar exacto si se confirma."@es .
+
+:FestividadQoylluriti :incluyeEvento :PasoCasaPrioste_2025_06_16 .
+
+
+:CeremoniaVeneracion_Templo_Qoylluriti_2025 a :EventoRitual ;
+  rdfs:label "Ceremonia de veneración en el templo de Qoyllur Rit’i (2025)"@es ;
+  :descripcionBreve "Ceremonia colectiva de veneración realizada en el interior del templo del Señor de Qoyllur Rit’i."@es ;
+  :nivelEmbeddings "B" ;
+  :estaEnLugar :SantuarioQoylluriti ;
+  :participaNacion :NacionPaucartambo .
+
+:FestividadQoylluriti :incluyeEvento :CeremoniaVeneracion_Templo_Qoylluriti_2025 .
+
+
+########################
+### NUEVOS EVENTOS (desde testimonio Jacho)
+########################
+
+:MisaUkukus_2025 a :EventoRitual ;
+  rdfs:label "Misa de Ukuku (2025)"@es ;
+  :descripcionBreve "Misa anual exclusiva para Ukuku/Ukumari de todas las naciones, realizada en el santuario."@es ;
+  :nivelEmbeddings "B" ;
+  :estaEnLugar :SantuarioQoylluriti ;
+  :participaNacion :NacionPaucartambo ;
+  rdfs:comment "Según testimonio, es una misa exclusiva para Ukuku de todas las naciones y se realiza todos los años."@es .
+
+:FestividadQoylluriti :incluyeEvento :MisaUkukus_2025 .
+
+
+:SubidaColquePunku_2025 a :EventoRitual ;
+  rdfs:label "Subida al nevado Colque Punku (2025)"@es ;
+  :descripcionBreve "Ascenso nocturno (lunes) hacia Colque Punku para realizar rituales, previo al retorno al santuario."@es ;
+  :nivelEmbeddings "B" ;
+  :estaEnLugar :ColquePunku ;
+  :estaEnLugar :Sinakara ;
+  :participaNacion :NacionPaucartambo ;
+  rdfs:comment "Según testimonio, la subida ocurre siempre la noche del lunes."@es .
+
+:FestividadQoylluriti :incluyeEvento :SubidaColquePunku_2025 .
+
+
+:Lomada24h_2025 a :EventoRitual ;
+  rdfs:label "Lomada (caminata ritual de 24 horas) (2025)"@es ;
+  :descripcionBreve "Caminata ritual conocida como 'lomada' o 'loman pureq', desde el santuario hacia el lugar de Inti Alabado."@es ;
+  :nivelEmbeddings "B" ;
+  :estaEnLugar :Ruta24h_Santuario_IntiAlabado ;
+  :estaEnLugar :SantuarioQoylluriti ;
+  :estaEnLugar :LugarIntiAlabado ;
+  :participaNacion :NacionPaucartambo ;
+  rdfs:comment "Nombre local indicado en testimonio: 'lomada' / 'loman pureq'."@es .
+
+:FestividadQoylluriti :incluyeEvento :Lomada24h_2025 .
+
+
+########################
+### TUS EVENTOS EXISTENTES (se mantienen, solo se refuerzan)
+########################
+
+:Caminata24h_Santuario_IntiAlabado_2025 a :EventoRitual ;
+  rdfs:label "Caminata ritual de 24 horas desde el santuario hacia Inti Alabado (2025)"@es ;
+  :descripcionBreve "Desplazamiento colectivo de peregrinos desde el santuario del Señor de Qoyllur Rit’i hacia el lugar donde se realiza el Inti Alabado."@es ;
+  :nivelEmbeddings "B" ;
+  :estaEnLugar :Ruta24h_Santuario_IntiAlabado ;
+  :estaEnLugar :SantuarioQoylluriti ;
+  :estaEnLugar :LugarIntiAlabado ;
+  :participaNacion :NacionPaucartambo .
+
+:IntiAlabado_2025 a :EventoRitual ;
+  rdfs:label "Inti Alabado (2025)"@es ;
+  :descripcionBreve "Evento ritual realizado al final de la caminata, en el lugar conocido como Inti Alabado (Inti llocsimuy)."@es ;
+  :nivelEmbeddings "B" ;
+  :estaEnLugar :LugarIntiAlabado ;
+  :participaNacion :NacionPaucartambo .
+
+:FestividadQoylluriti
+  :incluyeEvento :Caminata24h_Santuario_IntiAlabado_2025 ;
+  :incluyeEvento :IntiAlabado_2025 .
+
+########################
+### TAYANCANI (coherente con lo que ya tienes: :LugarIntiAlabado ubicadoEn :Tayancani)
+### Eventos vinculados a capilla y a imágenes (según testimonio)
+########################
+
+:TrasladoImagenSenorOcongate_Tayancani_2025 a :EventoRitual ;
+  rdfs:label "Traslado del Señor de Ocongate a Tayancani (2025)"@es ;
+  :descripcionBreve "Traslado del Señor de Ocongate hacia Tayancani para resguardar la capilla mientras el Señor de Tayancani está en Qoyllur Rit’i (según testimonio)."@es ;
+  :nivelEmbeddings "B" ;
+  :estaEnLugar :Tayancani ;
+  :participaNacion :NacionPaucartambo ;
+  rdfs:comment "Según testimonio: el Señor de Ocongate va a Tayancani y se queda cuidando la capilla mientras el Señor de Tayancani está en Qoyllur Rit’i."@es .
+
+:DejaImagenEnCapillaTayancani_2025 a :EventoRitual ;
+  rdfs:label "Depósito de imagen en la capilla de Tayancani (2025)"@es ;
+  :descripcionBreve "Acción ritual de dejar la imagen en la capilla de Tayancani al llegar al tramo asociado a Inti Alabado (según testimonio)."@es ;
+  :nivelEmbeddings "B" ;
+  :estaEnLugar :Tayancani ;
+  :participaNacion :NacionPaucartambo ;
+  rdfs:comment "Según respuesta: la imagen se deja en la capilla de Tayancani."@es .
+
+:FestividadQoylluriti
+  :incluyeEvento :TrasladoImagenSenorOcongate_Tayancani_2025 ;
+  :incluyeEvento :DejaImagenEnCapillaTayancani_2025 .
+
+########################
+### (X) OBJETOS RITUALES Y CANTO (Jacho, 2026)
+########################
+
+:Sorriago a :ObjetoRitual ;
+  rdfs:label "Sorriago"@es ;
+  :descripcionBreve "Objeto ritual portado durante la caminata (según testimonio)."@es ;
+  :nivelEmbeddings "C" ;
+  rdfs:comment "Ortografía por confirmar (Jacho Martínez, 02/02/2026)."@es .
+
+:CruzRitual a :ObjetoRitual ;
+  rdfs:label "Cruz"@es ;
+  :descripcionBreve "Cruz usada/transportada en tramos de la secuencia ritual (según testimonio)."@es ;
+  :nivelEmbeddings "C" .
+
+:BanderasRituales a :ObjetoRitual ;
+  rdfs:label "Banderas"@es ;
+  :descripcionBreve "Banderas portadas por la nación en distintos tramos (según testimonio)."@es ;
+  :nivelEmbeddings "C" .
+
+:CancionDespedida_QapaqQollas a :CantoRitual ;
+  rdfs:label "Canción de despedida de los Qapaq Qollas"@es ;
+  :descripcionBreve "Canto de despedida atribuido a los Qapaq Qollas; lo canta toda la nación (según testimonio)."@es ;
+  :nivelEmbeddings "C" .
+
+:Caminata24h_Santuario_IntiAlabado_2025
+  :incluyeObjetoRitual :Sorriago ;
+  :incluyeObjetoRitual :CruzRitual ;
+  :incluyeObjetoRitual :BanderasRituales .
+
+########################
+### (X) PUNTOS FIJOS: MACHU CRUZ / Q’ESPI CRUZ / YANAQANCHA (Jacho, 2026)
+### Pega en tu bloque de lugares
+########################
+
+:MachuCruz a :LugarDePaso ;
+  rdfs:label "Machu Cruz"@es ;
+  :descripcionBreve "Punto fijo con una cruz; ocurre al salir del santuario (según testimonio)."@es ;
+  :nivelEmbeddings "B" ;
+  rdfs:comment "Cruce físico con cruz (Jacho Martínez, 02/02/2026)."@es .
+
+:QespiCruz a :LugarDePaso ;
+  rdfs:label "Q’espi Cruz"@es ;
+  :descripcionBreve "Punto fijo con una cruz; encuentro nocturno donde canta la nación (según testimonio)."@es ;
+  :nivelEmbeddings "B" ;
+  rdfs:comment "Cruce físico con cruz; canto colectivo (Jacho Martínez, 02/02/2026)."@es .
+
+:Yanaqancha a :LugarDePaso ;
+  rdfs:label "Yanaqancha"@es ;
+  :descripcionBreve "Lugar de descanso previo al Inti Alabado; se descansa aproximadamente 4 horas (según testimonio)."@es ;
+  :nivelEmbeddings "B" ;
+  rdfs:comment "Definido como lugar/zona de descanso antes de continuar (Jacho Martínez, 02/02/2026)."@es .
+
+:QespiCruz :seCantaEn :CancionDespedida_QapaqQollas .
+
+:Caminata24h_Santuario_IntiAlabado_2025
+  :documentaA :MachuCruz ;
+  :documentaA :QespiCruz ;
+  :documentaA :Yanaqancha .
+
+
+########################
+### (X) PARADAS DE RUTA TEMPRANA (Jacho, 2026)
+### Pega junto a tus lugares (si faltan) y enlaza a la nación
+########################
+
+:Ocongate a :Localidad ;
+  rdfs:label "Ocongate"@es ;
+  :descripcionBreve "Localidad de paso en la ruta hacia Mahuayani; asociada a visita al prioste (según testimonio)."@es ;
+  :nivelEmbeddings "B" ;
+  rdfs:comment "Completar coordenadas si se dispone."@es .
+
+:Escabechayoc a :LugarDePaso ;
+  rdfs:label "Escabechayoc"@es ;
+  :descripcionBreve "Punto de descanso en la primera subida hacia el santuario (según testimonio)."@es ;
+  :nivelEmbeddings "B" ;
+  rdfs:comment "Descanso reportado por informante (Jacho Martínez, 02/02/2026)."@es .
+
+:Pachakunapata a :LugarDePaso ;
+  rdfs:label "Pachakunapata"@es ;
+  :descripcionBreve "Entrada al santuario donde se espera a que todos los danzantes estén listos para ingresar como nación (según testimonio)."@es ;
+  :nivelEmbeddings "B" ;
+  :ubicadoEn :SantuarioQoylluriti .
+
+:NacionPaucartambo
+  :incluyeParada :Huancarani ;
+  :incluyeParada :Ccatcca ;
+  :incluyeParada :Ocongate ;
+  :incluyeParada :Mahuayani ;
+  rdfs:comment "Secuencia de paradas reportada por informante (Jacho Martínez, 02/02/2026)."@es .
+
+#################################################################
+### RECURSO MEDIAL (FOTO)
+### Incluye código estable + ruta + fecha + relación documental.
+#################################################################
+
+########################
+### (C) FOTOS / RECURSOS (15 JUNIO 2025)
+########################
+
+:FOTO_15_JUNIO_1 a :Foto ;
+  rdfs:label "Foto: Ukumari/Ukuku frente a la iglesia de Paucartambo (15 junio 2025)"@es ;
+  :codigoRecurso "15-junio-1" ;
+  :rutaArchivo "15-junio-1.jpeg" ;
+  :fechaCaptura "2025-06-15"^^xsd:date ;
+  :descripcionBreve "Antes de partir hacia Mahuayani, en Paucartambo, se observa a los ukumari desfilando y danzando frente a la iglesia. Se distinguen trajes característicos con gorros y telas coloridas, sobre indumentaria base negra."@es ;
+  :fuenteTexto "Preanotación del equipo (María de los Ángeles), 15/06/2025."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :IglesiaPaucartambo ;
+  :documentaA :Paucartambo ;
+  rdfs:comment "Contexto: actividad previa a la salida hacia Mahuayani (según preanotación)."@es .
+
+:FestividadQoylluriti :tieneRecursoMedial :FOTO_15_JUNIO_1 .
+
+
+:FOTO_15_JUNIO_2 a :Foto ;
+  rdfs:label "Foto: Romería en el cementerio de Paucartambo (15 junio 2025)"@es ;
+  :codigoRecurso "15-junio-2" ;
+  :rutaArchivo "15-junio-2.jpeg" ;
+  :fechaCaptura "2025-06-15"^^xsd:date ;
+  :descripcionBreve "En el cementerio de Paucartambo, un grupo de ukumari, con pantalón negro y camisa blanca, visita las tumbas de miembros antiguos. Se observa a los participantes arrodillados frente a las sepulturas y banderas con colores característicos del grupo."@es ;
+  :fuenteTexto "Preanotación del equipo (María de los Ángeles), 15/06/2025."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :CementerioPaucartambo ;
+  :documentaA :Paucartambo ;
+  rdfs:comment "En la preanotación se sugiere que corresponde a una romería."@es .
+
+:FestividadQoylluriti :tieneRecursoMedial :FOTO_15_JUNIO_2 .
+
+
+:FOTO_15_JUNIO_3 a :Foto ;
+  rdfs:label "Foto: Parada nocturna en Ccatcca (15 junio 2025)"@es ;
+  :codigoRecurso "15-junio-3" ;
+  :rutaArchivo "15-junio-3.jpeg" ;
+  :fechaCaptura "2025-06-15"^^xsd:date ;
+  :descripcionBreve "Durante la noche del 15 de junio, en el trayecto entre Paucartambo y Mahuayani, el grupo realiza una parada en Ccatcca. Se observa una iglesia y numerosas personas reunidas en el espacio público; algunas consumen alimentos y bebidas calientes, como café, en un contexto de tránsito nocturno."@es ;
+  :fuenteTexto "Preanotación del equipo (María de los Ángeles), 15/06/2025."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :Ccatcca ;
+  :documentaA :PlazaCcatcca;
+  :documentaA :IglesiaSanJuanBautistaCcatcca;
+  rdfs:comment "Si luego se precisa, puede añadirse el nodo de iglesia/plaza específica de Ccatcca."@es .
+
+:FestividadQoylluriti :tieneRecursoMedial :FOTO_15_JUNIO_3 .
+
+
+:FOTO_15_JUNIO_4 a :Foto ;
+  rdfs:label "Foto: Recorrido de ukumari por Paucartambo antes de partir (15 junio 2025)"@es ;
+  :codigoRecurso "15-junio-4" ;
+  :rutaArchivo "15-junio-4.jpeg" ;
+  :fechaCaptura "2025-06-15"^^xsd:date ;
+  :descripcionBreve "En Paucartambo, un grupo de ukumari y otras personas recorre las calles antes de iniciar el trayecto hacia Mahuayani. La imagen muestra el tránsito conjunto entre danzantes y población local, y permite apreciar detalles del traje de los ukumari visibles desde la parte posterior."@es ;
+  :fuenteTexto "Preanotación del equipo (María de los Ángeles), 15/06/2025."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :Paucartambo ;
+  rdfs:comment "Contexto: preparación/salida hacia Mahuayani (según preanotación)."@es .
+
+:FestividadQoylluriti :tieneRecursoMedial :FOTO_15_JUNIO_4 .
+
+
+:FOTO_15_JUNIO_5 a :Foto ;
+  rdfs:label "Foto: Distribución de alimentos a peregrinos en Ccatcca (15 junio 2025, noche)"@es ;
+  :codigoRecurso "15-junio-5" ;
+  :rutaArchivo "15-junio-5.jpeg" ;
+  :fechaCaptura "2025-06-15"^^xsd:date ;
+  :descripcionBreve "Durante la noche del 15 de junio, en Ccatcca (trayecto entre Paucartambo y Mahuayani), se observa a personas del lugar distribuyendo maíz y carne a los asistentes. Varias personas se reúnen alrededor de los alimentos, recibiendo y sirviendo porciones de manera directa."@es ;
+  :descripcionEtnografica """En esa misma noche en Ccatcca, se registra también la distribución de mote a visitantes. Según la preanotación, el color del sombrero de algunos presentes podría sugerir procedencia de una nación cercana o influencia de la selva; esta interpretación queda como hipótesis y requiere verificación local."""@es ;
+  :fuenteTexto "Preanotación del equipo (María de los Ángeles), 15/06/2025."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :Ccatcca ;
+  :documentaA :PlazaCcatcca .
+
+:FestividadQoylluriti :tieneRecursoMedial :FOTO_15_JUNIO_5 .
+
+:FOTO_16_JUNIO_5 a :Foto ;
+  rdfs:label "Foto: Paso por la casa del prioste (16 junio 2025, madrugada)"@es ;
+  :codigoRecurso "16-junio-5" ;
+  :rutaArchivo "16-junio-5.jpeg" ;
+  :fechaCaptura "2025-06-16"^^xsd:date ;
+  :descripcionBreve "En la madrugada del 16 de junio, un grupo de Ukumari pasa por la casa del prioste del Señor de Qoyllur Rit’i. La imagen muestra a los participantes reunidos y en desplazamiento dentro del patio, algunos portando banderas y vestimenta ritual. La escena ocurre de noche y está iluminada artificialmente."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :PasoCasaPrioste_2025_06_16 .
+
+:FestividadQoylluriti :incluyeEvento :PasoCasaPrioste_2025_06_16 ;
+                     :tieneRecursoMedial :FOTO_16_JUNIO_5 .
+
+
+########################
+### (D) FOTOS / RECURSOS (16 JUNIO 2025)
+########################
+
+:FOTO_16_JUNIO_3 a :Foto ;
+  rdfs:label "Foto: Entorno del santuario con carpas y botica improvisada (16 junio 2025)"@es ;
+  :codigoRecurso "16-junio-3" ;
+  :rutaArchivo "16-junio-3.jpeg" ;
+  :fechaCaptura "2025-06-16"^^xsd:date ;
+  :descripcionBreve "Sector del entorno del santuario del Señor de Qoyllur Rit’i con numerosas carpas instaladas en las laderas, cubiertas con plásticos por las condiciones climáticas. En primer plano se observa una botica improvisada y personas transitando y permaneciendo en el lugar."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :SantuarioQoylluriti .
+
+:FestividadQoylluriti :tieneRecursoMedial :FOTO_16_JUNIO_3 .
+
+:FOTO_16_JUNIO_4 a :Foto ;
+  rdfs:label "Foto: Inicio de caminata desde Mahuayani (16 junio 2025)"@es ;
+  :codigoRecurso "16-junio-4" ;
+  :rutaArchivo "16-junio-4.jpeg" ;
+  :fechaCaptura "2025-06-16"^^xsd:date ;
+  :descripcionBreve "Grupo de Ukumari iniciando la caminata de madrugada desde Mahuayani hacia el santuario del Señor de Qoyllur Rit’i. Se observa el cartel vial de Mahuayani, carpas al borde del camino e infraestructura local. Los participantes avanzan cargando bultos y objetos personales; la imagen está tomada desde el interior del grupo en desplazamiento."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :Caminata_Mahuayani_Santuario_2025 ;
+  :documentaA :Mahuayani .
+
+:FestividadQoylluriti :incluyeEvento :Caminata_Mahuayani_Santuario_2025 ;
+                     :tieneRecursoMedial :FOTO_16_JUNIO_4 .
+
+:FOTO_16_JUNIO_2 a :Foto ;
+  rdfs:label "Foto: Concentración de danzas cerca del templo de Qoyllur Rit’i (16 junio 2025)"@es ;
+  :codigoRecurso "16-junio-2" ;
+  :rutaArchivo "16-junio-2.jpeg" ;
+  :fechaCaptura "2025-06-16"^^xsd:date ;
+  :descripcionBreve "Concentración de danzas en las inmediaciones del templo del Señor de Qoyllur Rit’i, alrededor de una pequeña capilla. Participan diversos grupos rituales, entre ellos Ukumari, Qollas y Chunchos. La fotografía está tomada desde el interior de un grupo Ukumari, lo que define el punto de vista de la escena."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :SantuarioQoylluriti .
+
+:FestividadQoylluriti :tieneRecursoMedial :FOTO_16_JUNIO_2 .
+
+:FOTO_16_JUNIO_1 a :Foto ;
+  rdfs:label "Foto: Ceremonia de veneración en el templo de Qoyllur Rit’i (16 junio 2025)"@es ;
+  :codigoRecurso "16-junio-1" ;
+  :rutaArchivo "16-junio-1.jpeg" ;
+  :fechaCaptura "2025-06-16"^^xsd:date ;
+  :descripcionBreve "Interior del templo que resguarda la imagen del Señor de Qoyllur Rit’i durante la noche del 16 de junio. El espacio se encuentra colmado de personas que participan en una ceremonia de veneración; se distinguen asistentes de distintos orígenes y vinculados a diversas danzas, sin ejecución ritual visible en el momento de la toma."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :CeremoniaVeneracion_Templo_Qoylluriti_2025 .
+
+:FestividadQoylluriti :incluyeEvento :CeremoniaVeneracion_Templo_Qoylluriti_2025 ;
+                     :tieneRecursoMedial :FOTO_16_JUNIO_1 .
+
+
+########################
+### (E) FOTOS / RECURSOS (17 JUNIO 2025)
+### Nota: aquí sí usamos xsd:date y el evento :BajadaColquePunku_2025 (ya existe en tu TTL)
+########################
+
+:QOY_FOTO_2025_17_JUN_6 a :Foto ;
+  rdfs:label "Foto: Descenso con cruz desde Colque Punku (17 junio 2025)"@es ;
+  :codigoRecurso "QOY-FOTO-2025-17-JUN-6" ;
+  :rutaArchivo "17-junio-6.jpeg" ;
+  :fechaCaptura "2025-06-17"^^xsd:date ;
+  :descripcionBreve "Se observa un grupo de ukumarí/ukuku descendiendo desde el glaciar Colque Punku por un camino estrecho. Durante el trayecto, cargan una cruz; en algunos sectores se observa nieve sobre el terreno rocoso. Los participantes visten su traje tradicional."@es ;
+  :fuenteTexto "Registro fotográfico propio (Javier), 17/06/2025."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :BajadaColquePunku_2025 ;
+  :documentaA :ColquePunku .
+
+:FestividadQoylluriti :tieneRecursoMedial :QOY_FOTO_2025_17_JUN_6 .
+
+
+:QOY_FOTO_2025_17_JUN_7 a :Foto ;
+  rdfs:label "Foto: Descenso con otra nación al fondo (17 junio 2025)"@es ;
+  :codigoRecurso "QOY-FOTO-2025-17-JUN-7" ;
+  :rutaArchivo "17-junio-7.jpeg" ;
+  :fechaCaptura "2025-06-17"^^xsd:date ;
+  :descripcionBreve "Se observa a ukumarí/ukuku cargando una cruz en un entorno de alta montaña con nieve dispersa. En segundo plano se distingue otro grupo de ukumarí con variaciones en los colores del vestuario, lo que indica la presencia de más de un grupo ritual en el mismo espacio."@es ;
+  :fuenteTexto "Registro fotográfico propio (Javier), 17/06/2025."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :BajadaColquePunku_2025 ;
+  :documentaA :ColquePunku .
+
+:FestividadQoylluriti :tieneRecursoMedial :QOY_FOTO_2025_17_JUN_7 .
+
+
+:QOY_FOTO_2025_17_JUN_8 a :Foto ;
+  rdfs:label "Foto: Paisaje con laguna en el entorno de Colque Punku (17 junio 2025)"@es ;
+  :codigoRecurso "QOY-FOTO-2025-17-JUN-8" ;
+  :rutaArchivo "17-junio-8.jpeg" ;
+  :fechaCaptura "2025-06-17"^^xsd:date ;
+  :descripcionBreve "Se observa un paisaje amplio de alta montaña, con sectores cubiertos de nieve, formaciones rocosas y una laguna visible en la parte media del encuadre. Cerca de la laguna se distingue a distancia un grupo de personas con vestimenta ritual; por colores y disposición, podría tratarse de un grupo distinto al observado en otras imágenes. El entorno natural (montaña, nieve y agua) domina la escena y enmarca la presencia humana."@es ;
+  :fuenteTexto "Registro fotográfico propio (Javier), 17/06/2025."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :ColquePunku ;
+  :documentaA :Sinakara ;
+  rdfs:comment "Si se decide modelar la laguna como lugar, crear un nodo específico y vincularlo."@es .
+
+:FestividadQoylluriti :tieneRecursoMedial :QOY_FOTO_2025_17_JUN_8 .
+
+
+:QOY_FOTO_2025_17_JUN_9 a :Foto ;
+  rdfs:label "Foto: Ukumari posando al amanecer en entorno de Colque Punku (17 junio 2025)"@es ;
+  :codigoRecurso "QOY-FOTO-2025-17-JUN-9" ;
+  :rutaArchivo "17-junio-9.jpeg" ;
+  :fechaCaptura "2025-06-17"^^xsd:date ;
+  :descripcionBreve "Se observa a un grupo de ukumarí/ukuku posando de manera frontal con sus trajes rituales, en un entorno de alta montaña con presencia de nieve. Al fondo se distinguen el glaciar y formaciones rocosas que enmarcan la escena. La imagen fue tomada durante el amanecer, apreciable en la iluminación suave y el cielo cubierto."@es ;
+  :fuenteTexto "Registro fotográfico propio (Javier), 17/06/2025."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :ColquePunku ;
+  :documentaA :Sinakara .
+
+:FestividadQoylluriti :tieneRecursoMedial :QOY_FOTO_2025_17_JUN_9 .
+
+
+:QOY_FOTO_2025_17_JUN_10 a :Foto ;
+  rdfs:label "Foto: Paisaje de alta montaña en el entorno de Colque Punku (17 junio 2025)"@es ;
+  :codigoRecurso "QOY-FOTO-2025-17-JUN-10" ;
+  :rutaArchivo "17-junio-10.jpeg" ;
+  :fechaCaptura "2025-06-17"^^xsd:date ;
+  :descripcionBreve "Se observa un paisaje de alta montaña con sectores cubiertos de nieve y formaciones rocosas escarpadas. La presencia de neblina y la pendiente pronunciada caracterizan el entorno natural donde se desarrolla la peregrinación. La montaña domina visualmente la escena y funciona como referente central del paisaje ritual."@es ;
+  :fuenteTexto "Registro fotográfico propio (Javier), 17/06/2025."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :Sinakara ;
+  :documentaA :ColquePunku .
+
+:FestividadQoylluriti :tieneRecursoMedial :QOY_FOTO_2025_17_JUN_10 .
+
+:FOTO_17_JUNIO_1 a :Foto ;
+  rdfs:label "Foto: Tramo de la ruta de 24 horas hacia Inti Alabado (17 junio 2025)"@es ;
+  :codigoRecurso "17-junio-1" ;
+  :rutaArchivo "17-junio-1.jpeg" ;
+  :fechaCaptura "2025-06-17"^^xsd:date ;
+  :descripcionBreve "Tramo de la ruta de 24 horas desde el santuario de Qoyllur Rit’i hacia el Inti Alabado. Se observan numerosos ukumari de diferentes naciones y otras personas caminando en fila, varios con trajes tradicionales y capas, en un paisaje de alta montaña."@es ;
+  :fuenteTexto "Registro fotográfico (Emily), 17/06/2025."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :Caminata24h_Santuario_IntiAlabado_2025 ;
+  :documentaA :Ruta24h_Santuario_IntiAlabado .
+
+:FestividadQoylluriti :tieneRecursoMedial :FOTO_17_JUNIO_1 .
+
+
+:FOTO_17_JUNIO_2 a :Foto ;
+  rdfs:label "Foto: Inicio de la caminata de 24 horas desde el santuario (17 junio 2025)"@es ;
+  :codigoRecurso "17-junio-2" ;
+  :rutaArchivo "17-junio-2.jpeg" ;
+  :fechaCaptura "2025-06-17"^^xsd:date ;
+  :descripcionBreve "Luego de subir y bajar del glaciar, comienza la caminata ritual de aproximadamente 24 horas desde el santuario de Qoyllur Rit’i hacia el Inti Alabado. Las personas caminan en fila, abrigadas y cargando sus pertenencias, con el paisaje de montaña altoandina alrededor."@es ;
+  :fuenteTexto "Registro fotográfico (Emily), 17/06/2025."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :Caminata24h_Santuario_IntiAlabado_2025 ;
+  :documentaA :SantuarioQoylluriti .
+
+:FestividadQoylluriti :tieneRecursoMedial :FOTO_17_JUNIO_2 .
+
+
+:FOTO_17_JUNIO_3 a :Foto ;
+  rdfs:label "Foto: Descanso en la ruta de 24 horas (17 junio 2025)"@es ;
+  :codigoRecurso "17-junio-3" ;
+  :rutaArchivo "17-junio-3.jpeg" ;
+  :fechaCaptura "2025-06-17"^^xsd:date ;
+  :descripcionBreve "Punto de descanso en la ruta de 24 horas entre el santuario de Qoyllur Rit’i y el Inti Alabado. Se observan grupos de personas distribuidas a lo largo del camino y, a la derecha, filas de ukumari de otras naciones reconocibles por sus trajes tradicionales en tonos rojos y negros. En la preanotación se indica que es una de las últimas vistas del área de Sinakara."@es ;
+  :fuenteTexto "Registro fotográfico (Emily), 17/06/2025."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :Ruta24h_Santuario_IntiAlabado ;
+  :documentaA :Caminata24h_Santuario_IntiAlabado_2025 .
+
+:FestividadQoylluriti :tieneRecursoMedial :FOTO_17_JUNIO_3 .
+
+
+:FOTO_17_JUNIO_4 a :Foto ;
+  rdfs:label "Foto: Descenso hacia la zona ritual principal tras el glaciar (17 junio 2025)"@es ;
+  :codigoRecurso "17-junio-4" ;
+  :rutaArchivo "17-junio-4.jpeg" ;
+  :fechaCaptura "2025-06-17"^^xsd:date ;
+  :descripcionBreve "Luego de descender desde el glaciar hacia la zona ritual principal de Qoyllur Rit’i, los ukumari de distintas naciones avanzan formando grupos y filas. Se observa el paisaje rocoso con presencia de nieve y, en la parte superior, la zona desde donde se realizó el descenso."@es ;
+  :fuenteTexto "Registro fotográfico (Emily), 17/06/2025."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :BajadaColquePunku_2025 ;
+  :documentaA :ColquePunku .
+
+:FestividadQoylluriti :tieneRecursoMedial :FOTO_17_JUNIO_4 .
+
+
+:FOTO_17_JUNIO_5 a :Foto ;
+  rdfs:label "Foto: Descenso matinal desde la zona del glaciar hacia el santuario (17 junio 2025)"@es ;
+  :codigoRecurso "17-junio-5" ;
+  :rutaArchivo "17-junio-5.jpeg" ;
+  :fechaCaptura "2025-06-17"^^xsd:date ;
+  :descripcionBreve "Descenso desde la zona del glaciar hacia el santuario de Qoyllur Rit’i durante la mañana del 17 de junio. Se observan montañas rocosas, nieve dispersa y vegetación altoandina; a lo lejos se distinguen grupos pequeños de ukumari de otras naciones desplazándose por la ladera."@es ;
+  :fuenteTexto "Registro fotográfico (Emily), 17/06/2025."@es ;
+  :nivelEmbeddings "A" ;
+  :documentaA :BajadaColquePunku_2025 ;
+  :documentaA :SantuarioQoylluriti .
+
+:FestividadQoylluriti :tieneRecursoMedial :FOTO_17_JUNIO_5 .
+
+################################################################
+### CÓMO EXTENDER ESTE TTL (PATRONES)
+### 1) Agregar un nuevo lugar:
+###    :NuevoLugar a :Lugar ; rdfs:label ... ; geo:lat ... ; geo:long ... ; :descripcionBreve ... .
+###
+### 2) Agregar un evento:
+###    :EventoX a :EventoRitual ; :estaEnLugar :LugarY ; y conectar:
+###    :FestividadZ :incluyeEvento :EventoX .
+###
+### 3) Agregar un recurso:
+###    :CODIGO ... a :Foto/:Video/:Audio/:DocumentoTexto ;
+###      :codigoRecurso "..."; :rutaArchivo "..."; :fechaCaptura "...";
+###      :documentaA :EventoX (o :FestividadZ, o :LugarY) ;
+###      :descripcionBreve ... ; (Nivel A => :descripcionEtnografica + :fuenteTexto).
+#################################################################
