@@ -381,47 +381,128 @@ def extraer_lugares(grafo):
     
     return resultados
 
-def crear_mapa_simple_y_funcional(grafo, lugares_data, center_lat=-13.53, center_lon=-71.97, zoom=10):
-    """Mapa SIMPLE donde cada lugar es CLICKABLE"""
+def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-71.97, zoom=10):
+    """Agrupa lugares con mismas coordenadas PERO cada uno es clickable"""
     
-    mapa = folium.Map(location=[center_lat, center_lon], zoom_start=zoom, tiles='OpenStreetMap')
+    lugares_con_coords = [l for l in lugares_data if l['lat'] and l['lon']]
     
-    # Para lugares con mismas coordenadas, separar un poco
+    if not lugares_con_coords:
+        return folium.Map(location=[center_lat, center_lon], zoom_start=zoom)
+    
+    mapa = folium.Map(
+        location=[center_lat, center_lon],
+        zoom_start=zoom,
+        tiles='OpenStreetMap',
+        control_scale=True
+    )
+    
+    # Agrupar por coordenadas
     from collections import defaultdict
-    contador_coords = defaultdict(int)
+    grupos = defaultdict(list)
     
-    for lugar in [l for l in lugares_data if l['lat'] and l['lon']]:
-        contador_coords[(lugar['lat'], lugar['lon'])] += 1
-        num_en_esta_coord = contador_coords[(lugar['lat'], lugar['lon'])]
-        
-        # Separar ligeramente si hay más de uno
-        if num_en_esta_coord > 1:
-            separacion = 0.0002 * (num_en_esta_coord - 1)  # ~22 metros por marcador
-            lat = lugar['lat'] + separacion
-            lon = lugar['lon'] + separacion
+    for lugar in lugares_con_coords:
+        key = (lugar['lat'], lugar['lon'])
+        grupos[key].append(lugar)
+    
+    # Para cada grupo
+    for (lat, lon), lugares in grupos.items():
+        if len(lugares) == 1:
+            # Solo un lugar - marcador normal
+            lugar = lugares[0]
+            relaciones = obtener_relaciones_lugar(grafo, lugar['uri'])
+            popup_html = crear_popup_html(lugar, relaciones)
+            
+            color = 'blue'
+            if lugar['tipo_general'] == 'Iglesia': color = 'purple'
+            elif lugar['tipo_general'] == 'Santuario': color = 'red'
+            
+            folium.Marker(
+                [lat, lon],
+                popup=folium.Popup(popup_html, max_width=350),
+                tooltip=lugar['nombre'],
+                icon=folium.Icon(color=color, icon='info-sign')
+            ).add_to(mapa)
+            
         else:
-            lat = lugar['lat']
-            lon = lugar['lon']
-        
-        # Popup con toda la información
-        relaciones = obtener_relaciones_lugar(grafo, lugar['uri'])
-        popup_html = crear_popup_html(lugar, relaciones)
-        
-        # Marcador con color por tipo
-        color = 'blue'
-        if lugar['tipo_general'] == 'Iglesia':
-            color = 'purple'
-        elif lugar['tipo_general'] == 'Santuario':
-            color = 'red'
-        elif lugar['tipo_general'] == 'Glaciar':
-            color = 'lightblue'
-        
-        folium.Marker(
-            [lat, lon],
-            popup=folium.Popup(popup_html, max_width=350),
-            tooltip=lugar['nombre'],
-            icon=folium.Icon(color=color, icon='info-sign')
-        ).add_to(mapa)
+            # MÚLTIPLES lugares - crear MARCADOR DE GRUPO
+            # Este marcador agrupa pero permite ver todos
+            
+            # HTML del popup del GRUPO
+            popup_grupo_html = f"""
+            <div style="width: 300px; font-family: Arial; padding: 10px;">
+                <h4 style="margin: 0 0 10px 0; color: #2c3e50;">
+                    📍 {len(lugares)} lugares aquí
+                </h4>
+                <p style="margin: 0 0 10px 0; font-size: 13px;">
+                    <strong>Coordenadas:</strong> {lat:.6f}, {lon:.6f}
+                </p>
+                <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 8px;">
+            """
+            
+            # Añadir CADA lugar como elemento CLICKABLE en el popup
+            for i, lugar in enumerate(lugares):
+                # Mini-info de cada lugar
+                icono = '📍'
+                if lugar['tipo_general'] == 'Localidad': icono = '🏘️'
+                elif lugar['tipo_general'] == 'Iglesia': icono = '⛪'
+                elif lugar['tipo_general'] == 'Santuario': icono = '🛐'
+                
+                popup_grupo_html += f"""
+                <div style="padding: 6px; margin: 4px 0; background: {'#f5f5f5' if i % 2 == 0 else 'white'}; 
+                            border-radius: 4px; border-left: 3px solid #3498db;">
+                    <div style="font-weight: bold; font-size: 13px;">
+                        {icono} {html.escape(lugar['nombre'])}
+                    </div>
+                    <div style="font-size: 11px; color: #666;">
+                        {lugar['tipo_general']} • Nivel {lugar['nivel']}
+                    </div>
+                </div>
+                """
+            
+            popup_grupo_html += """
+                </div>
+                <p style="margin-top: 10px; font-size: 11px; color: #7f8c8d;">
+                    💡 <em>Cada lugar tiene su información completa</em>
+                </p>
+            </div>
+            """
+            
+            # Marcador del GRUPO (color especial)
+            folium.Marker(
+                [lat, lon],
+                popup=folium.Popup(popup_grupo_html, max_width=350),
+                tooltip=f"📍 {len(lugares)} lugares aquí",
+                icon=folium.Icon(color='orange', icon='layer-group', prefix='fa')
+            ).add_to(mapa)
+            
+            # También añadir marcadores individuales (pero muy juntos)
+            # Así el usuario puede clickear el grupo O cada lugar
+            for i, lugar in enumerate(lugares):
+                # Mover cada uno un poquito para poder clickear individualmente
+                desplazamiento = 0.00005 * i  # Muy pequeño, casi imperceptible
+                lat_individual = lat + desplazamiento
+                lon_individual = lon + desplazamiento
+                
+                # Popup INDIVIDUAL completo
+                relaciones = obtener_relaciones_lugar(grafo, lugar['uri'])
+                popup_individual_html = crear_popup_html(lugar, relaciones)
+                
+                # Color individual
+                color_individual = 'blue'
+                if lugar['tipo_general'] == 'Iglesia': color_individual = 'purple'
+                elif lugar['tipo_general'] == 'Santuario': color_individual = 'red'
+                
+                # Marcador individual (casi en el mismo sitio)
+                folium.CircleMarker(
+                    [lat_individual, lon_individual],
+                    radius=6,
+                    color=color_individual,
+                    fill=True,
+                    fill_color=color_individual,
+                    fill_opacity=0.7,
+                    popup=folium.Popup(popup_individual_html, max_width=350),
+                    tooltip=lugar['nombre']
+                ).add_to(mapa)
     
     return mapa
 
