@@ -193,7 +193,7 @@ def obtener_relaciones_lugar(grafo, uri_lugar):
     return relaciones
 
 def crear_popup_html(lugar, relaciones):
-    """Crea HTML enriquecido para el popup con relaciones"""
+    """Crea HTML enriquecido para el popup con relaciones VISUALMENTE INTERACTIVAS"""
     
     # Escapar caracteres HTML
     nombre = html.escape(lugar['nombre'])
@@ -210,8 +210,11 @@ def crear_popup_html(lugar, relaciones):
     }
     color = colores_tipo.get(lugar['tipo_general'], '#95a5a6')
     
+    # Crear un ID único para este lugar
+    lugar_id = lugar['uri'].replace('http://example.org/festividades#', '').replace('#', '_')
+    
     html_content = f"""
-    <div style="width: 320px; font-family: Arial, sans-serif; max-height: 500px; overflow-y: auto;">
+    <div id="popup-{lugar_id}" style="width: 350px; font-family: Arial, sans-serif; max-height: 500px; overflow-y: auto;">
         <!-- Encabezado -->
         <div style="background-color: {color}; color: white; padding: 10px; border-radius: 5px 5px 0 0;">
             <h3 style="margin: 0; font-size: 16px;">{nombre}</h3>
@@ -223,48 +226,82 @@ def crear_popup_html(lugar, relaciones):
         <!-- Cuerpo -->
         <div style="padding: 12px; background-color: #f9f9f9;">
             <!-- Descripción -->
-            <div style="margin-bottom: 12px;">
-                <p style="margin: 0; font-size: 13px; color: #333;">{descripcion}</p>
+            <div style="margin-bottom: 12px; padding: 8px; background: white; border-radius: 4px; border: 1px solid #e0e0e0;">
+                <p style="margin: 0; font-size: 13px; color: #333; line-height: 1.5;">{descripcion}</p>
             </div>
             
             <!-- Coordenadas -->
-            <div style="background-color: #ecf0f1; padding: 8px; border-radius: 4px; margin-bottom: 12px;">
-                <p style="margin: 0; font-size: 12px; color: #2c3e50;">
-                    📍 Lat: {lugar['lat']:.6f}, Lon: {lugar['lon']:.6f}<br>
-                    {f'📍 En: {html.escape(lugar["ubicado_en"])}' if lugar['ubicado_en'] else ''}
+            <div style="background-color: #ecf0f1; padding: 10px; border-radius: 4px; margin-bottom: 12px; 
+                        border: 1px solid #d5dbdb;">
+                <p style="margin: 0; font-size: 12px; color: #2c3e50; font-weight: bold;">
+                    📍 <span style="color: #e74c3c;">Coordenadas:</span>
                 </p>
+                <p style="margin: 4px 0 0 0; font-size: 11px; color: #34495e;">
+                    Lat: {lugar['lat']:.6f}, Lon: {lugar['lon']:.6f}
+                </p>
+                {f'<p style="margin: 4px 0 0 0; font-size: 11px; color: #16a085;">📍 <strong>Ubicado en:</strong> {html.escape(lugar["ubicado_en"])}</p>' if lugar['ubicado_en'] else ''}
             </div>
     """
     
-    # Sección de Eventos
+    # Sección de Eventos - HACER VISUALMENTE CLICKEABLE
     if relaciones['eventos']:
         html_content += """
             <div style="margin-bottom: 12px;">
-                <h4 style="margin: 0 0 6px 0; font-size: 14px; color: #e74c3c;">🎭 Eventos Rituales</h4>
+                <div style="display: flex; align-items: center; margin-bottom: 6px;">
+                    <div style="background: #e74c3c; color: white; width: 24px; height: 24px; border-radius: 50%; 
+                                display: flex; align-items: center; justify-content: center; margin-right: 8px; font-size: 12px;">
+                        🎭
+                    </div>
+                    <h4 style="margin: 0; font-size: 14px; color: #e74c3c;">Eventos Rituales</h4>
+                </div>
         """
         for evento in relaciones['eventos'][:3]:  # Mostrar máximo 3
             nombre_evento = html.escape(evento['nombre'])
+            desc_evento = html.escape(evento['descripcion'][:60] + "...") if evento['descripcion'] else ""
+            
             html_content += f"""
-                <div style="background-color: #ffebee; padding: 6px; margin: 4px 0; border-radius: 3px; border-left: 3px solid #e74c3c;">
-                    <p style="margin: 0; font-size: 12px; font-weight: bold;">{nombre_evento}</p>
-                    {f'<p style="margin: 2px 0 0 0; font-size: 11px; color: #666;">{html.escape(evento["descripcion"][:80])}...</p>' if evento['descripcion'] else ''}
+                <div class="evento-item" 
+                     style="background-color: #ffebee; padding: 8px; margin: 6px 0; border-radius: 4px; 
+                            border-left: 3px solid #e74c3c; border: 1px solid #fadbd8;
+                            transition: all 0.2s; cursor: default;"
+                     onmouseover="this.style.backgroundColor='#fce4ec'; this.style.transform='translateX(2px)';"
+                     onmouseout="this.style.backgroundColor='#ffebee'; this.style.transform='translateX(0)';">
+                    <p style="margin: 0; font-size: 12px; font-weight: bold; color: #c0392b;">
+                        {nombre_evento}
+                    </p>
+                    {f'<p style="margin: 4px 0 0 0; font-size: 11px; color: #7f8c8d;">{desc_evento}</p>' if desc_evento else ''}
                 </div>
             """
         if len(relaciones['eventos']) > 3:
-            html_content += f'<p style="margin: 4px 0 0 0; font-size: 11px; color: #7f8c8d;">+ {len(relaciones["eventos"]) - 3} eventos más</p>'
+            html_content += f"""
+                <div style="text-align: center; margin-top: 6px;">
+                    <span style="font-size: 10px; color: #7f8c8d; background: #f5f5f5; padding: 2px 8px; border-radius: 10px;">
+                        + {len(relaciones['eventos']) - 3} eventos más
+                    </span>
+                </div>
+            """
         html_content += "</div>"
     
     # Sección de Festividades
     if relaciones['festividades']:
         html_content += """
             <div style="margin-bottom: 12px;">
-                <h4 style="margin: 0 0 6px 0; font-size: 14px; color: #9b59b6;">🎉 Festividades</h4>
+                <div style="display: flex; align-items: center; margin-bottom: 6px;">
+                    <div style="background: #9b59b6; color: white; width: 24px; height: 24px; border-radius: 50%; 
+                                display: flex; align-items: center; justify-content: center; margin-right: 8px; font-size: 12px;">
+                        🎉
+                    </div>
+                    <h4 style="margin: 0; font-size: 14px; color: #9b59b6;">Festividades</h4>
+                </div>
         """
         for fest in relaciones['festividades']:
             nombre_fest = html.escape(fest['nombre'])
             html_content += f"""
-                <div style="background-color: #f3e5f5; padding: 6px; margin: 4px 0; border-radius: 3px; border-left: 3px solid #9b59b6;">
-                    <p style="margin: 0; font-size: 12px; font-weight: bold;">{nombre_fest}</p>
+                <div style="background-color: #f3e5f5; padding: 8px; margin: 6px 0; border-radius: 4px; 
+                            border-left: 3px solid #9b59b6; border: 1px solid #e8daef;">
+                    <p style="margin: 0; font-size: 12px; font-weight: bold; color: #8e44ad;">
+                        {nombre_fest}
+                    </p>
                 </div>
             """
         html_content += "</div>"
@@ -273,63 +310,94 @@ def crear_popup_html(lugar, relaciones):
     if relaciones['recursos']:
         html_content += """
             <div style="margin-bottom: 12px;">
-                <h4 style="margin: 0 0 6px 0; font-size: 14px; color: #3498db;">📁 Recursos Multimedia</h4>
+                <div style="display: flex; align-items: center; margin-bottom: 6px;">
+                    <div style="background: #3498db; color: white; width: 24px; height: 24px; border-radius: 50%; 
+                                display: flex; align-items: center; justify-content: center; margin-right: 8px; font-size: 12px;">
+                        📁
+                    </div>
+                    <h4 style="margin: 0; font-size: 14px; color: #3498db;">Recursos Multimedia</h4>
+                </div>
         """
         for recurso in relaciones['recursos'][:2]:  # Mostrar máximo 2
             html_content += f"""
-                <div style="background-color: #e3f2fd; padding: 6px; margin: 4px 0; border-radius: 3px; border-left: 3px solid #3498db;">
-                    <p style="margin: 0; font-size: 12px;">{recurso['tipo']}: {html.escape(recurso['codigo'])}</p>
+                <div style="background-color: #e3f2fd; padding: 8px; margin: 6px 0; border-radius: 4px; 
+                            border-left: 3px solid #3498db; border: 1px solid #bbdefb;">
+                    <p style="margin: 0; font-size: 12px; color: #2980b9;">
+                        <strong>{recurso['tipo']}:</strong> {html.escape(recurso['codigo'])}
+                    </p>
                 </div>
             """
         if len(relaciones['recursos']) > 2:
-            html_content += f'<p style="margin: 4px 0 0 0; font-size: 11px; color: #7f8c8d;">+ {len(relaciones["recursos"]) - 2} recursos más</p>'
+            html_content += f"""
+                <div style="text-align: center; margin-top: 6px;">
+                    <span style="font-size: 10px; color: #7f8c8d; background: #f5f5f5; padding: 2px 8px; border-radius: 10px;">
+                        + {len(relaciones['recursos']) - 2} recursos más
+                    </span>
+                </div>
+            """
         html_content += "</div>"
     
     # Sección de Rutas
     if relaciones['rutas']:
         html_content += """
             <div style="margin-bottom: 12px;">
-                <h4 style="margin: 0 0 6px 0; font-size: 14px; color: #e67e22;">🛣️ Rutas</h4>
+                <div style="display: flex; align-items: center; margin-bottom: 6px;">
+                    <div style="background: #e67e22; color: white; width: 24px; height: 24px; border-radius: 50%; 
+                                display: flex; align-items: center; justify-content: center; margin-right: 8px; font-size: 12px;">
+                        🛣️
+                    </div>
+                    <h4 style="margin: 0; font-size: 14px; color: #e67e22;">Rutas</h4>
+                </div>
         """
         for ruta in relaciones['rutas']:
             nombre_ruta = html.escape(ruta['nombre'])
             html_content += f"""
-                <div style="background-color: #fff3e0; padding: 6px; margin: 4px 0; border-radius: 3px; border-left: 3px solid #e67e22;">
-                    <p style="margin: 0; font-size: 12px; font-weight: bold;">{nombre_ruta}</p>
+                <div style="background-color: #fff3e0; padding: 8px; margin: 6px 0; border-radius: 4px; 
+                            border-left: 3px solid #e67e22; border: 1px solid #ffe0b2;">
+                    <p style="margin: 0; font-size: 12px; font-weight: bold; color: #d35400;">
+                        {nombre_ruta}
+                    </p>
                 </div>
             """
         html_content += "</div>"
     
-    # Pie de popup MODIFICADO para ser clickeable
+    # Pie de popup - SIN JAVASCRIPT, solo visual
     html_content += f"""
-            <!-- Información adicional -->
-            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 10px; color: #95a5a6;">
-                <p style="margin: 0;">
-                    📌 <span style="cursor: pointer; text-decoration: underline; color: #3498db;" 
-                          onclick="event.stopPropagation(); console.log('Pop-up interactivo');">
-                          Haz click aquí para explorar
-                      </span><br>
-                    URI: {lugar['uri'].split('#')[-1][:30]}...
-                </p>
+            <!-- Información adicional - VISUAL SOLAMENTE -->
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 2px dashed #ddd;">
+                <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
+                     padding: 8px; border-radius: 4px; text-align: center;">
+                    <p style="margin: 0; font-size: 11px; color: #495057;">
+                        <span style="font-weight: bold; color: {color};">📍 {nombre}</span>
+                    </p>
+                    <p style="margin: 4px 0 0 0; font-size: 9px; color: #6c757d;">
+                        URI: {lugar['uri'].split('#')[-1][:25]}...
+                    </p>
+                </div>
             </div>
         </div>
     </div>
     
-    <script>
-    // Permitir clics dentro del popup
-    document.addEventListener('click', function(e) {{
-        e.stopPropagation();
-    }}, true);
-    
-    // Hacer todos los elementos clickeables
-    document.querySelectorAll('div, p, span').forEach(function(el) {{
-        el.style.pointerEvents = 'auto';
-        el.addEventListener('click', function(e) {{
-            e.stopPropagation();
-            console.log('Elemento clickeado:', el.tagName);
-        }});
-    }});
-    </script>
+    <!-- ESTILOS CSS PARA HACERLO VISUALMENTE ATRACTIVO -->
+    <style>
+        #popup-{lugar_id} {{
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }}
+        
+        #popup-{lugar_id} .evento-item:hover {{
+            box-shadow: 0 2px 8px rgba(231, 76, 60, 0.2);
+        }}
+        
+        #popup-{lugar_id} div[style*="background-color: #ffebee"]:hover {{
+            background-color: #fce4ec !important;
+        }}
+        
+        #popup-{lugar_id} div[style*="background-color: #f3e5f5"]:hover {{
+            background-color: #f3e5f5 !important;
+        }}
+    </style>
     """
     
     return html_content
