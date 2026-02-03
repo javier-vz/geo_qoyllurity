@@ -41,7 +41,10 @@ RDF = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
 # -------------------------------------------------------------------
 
 def obtener_relaciones_lugar(grafo, uri_lugar):
-    """Obtiene todas las relaciones de un lugar desde el grafo"""
+    """Obtiene todas las relaciones de un lugar desde el grafo - CONSULTAS CORREGIDAS"""
+    
+    print(f"🔍 Buscando relaciones para URI: {uri_lugar}")
+    
     relaciones = {
         'eventos': [],
         'festividades': [],
@@ -51,7 +54,7 @@ def obtener_relaciones_lugar(grafo, uri_lugar):
         'naciones': []
     }
     
-    # 1. Eventos que ocurren en este lugar
+    # 1. Eventos que ocurren en este lugar - CONSULTA CORREGIDA
     query_eventos = f"""
     PREFIX : <http://example.org/festividades#>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -66,15 +69,17 @@ def obtener_relaciones_lugar(grafo, uri_lugar):
     """
     
     try:
-        for row in grafo.query(query_eventos):
+        resultados = list(grafo.query(query_eventos))
+        print(f"  ✅ Eventos encontrados: {len(resultados)}")
+        for row in resultados:
             relaciones['eventos'].append({
                 'nombre': str(row.nombre),
                 'descripcion': str(row.descripcion) if row.descripcion else None
             })
-    except:
-        pass
+    except Exception as e:
+        print(f"  ❌ Error en query eventos: {str(e)}")
     
-    # 2. Festividades que se celebran aquí
+    # 2. Festividades que se celebran aquí - CONSULTA CORREGIDA
     query_festividades = f"""
     PREFIX : <http://example.org/festividades#>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -89,48 +94,82 @@ def obtener_relaciones_lugar(grafo, uri_lugar):
     """
     
     try:
-        for row in grafo.query(query_festividades):
+        resultados = list(grafo.query(query_festividades))
+        print(f"  ✅ Festividades encontradas: {len(resultados)}")
+        for row in resultados:
             relaciones['festividades'].append({
                 'nombre': str(row.nombre),
                 'descripcion': str(row.descripcion) if row.descripcion else None
             })
-    except:
-        pass
+    except Exception as e:
+        print(f"  ❌ Error en query festividades: {str(e)}")
     
-    # 3. Recursos multimedia
+    # 3. Recursos multimedia que documentan este lugar - CONSULTA CORREGIDA
     query_recursos = f"""
     PREFIX : <http://example.org/festividades#>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     
-    SELECT ?recurso ?codigo ?tipo ?ruta
+    SELECT ?recurso ?codigo ?ruta
     WHERE {{
       ?recurso a :RecursoMedial ;
                :documentaA <{uri_lugar}> ;
-               :codigoRecurso ?codigo ;
-               :rutaArchivo ?ruta .
-      
-      BIND(
-        IF(CONTAINS(?codigo, "-FOTO-"), "📸 Foto",
-          IF(CONTAINS(?codigo, "-VID-"), "🎥 Video",
-            IF(CONTAINS(?codigo, "-AUD-"), "🎧 Audio",
-              IF(CONTAINS(?codigo, "-DOC-"), "📄 Documento", "📁 Recurso")
-            )
-          )
-        ) AS ?tipo
-      )
+               :codigoRecurso ?codigo .
+      OPTIONAL {{ ?recurso :rutaArchivo ?ruta . }}
     }}
     LIMIT 5
     """
     
     try:
-        for row in grafo.query(query_recursos):
+        resultados = list(grafo.query(query_recursos))
+        print(f"  ✅ Recursos encontrados: {len(resultados)}")
+        for row in resultados:
+            codigo = str(row.codigo)
+            # Determinar tipo basado en el código (como indica el TTL)
+            if "-FOTO-" in codigo:
+                tipo_recurso = "📸 Foto"
+            elif "-VID-" in codigo:
+                tipo_recurso = "🎥 Video"
+            elif "-AUD-" in codigo:
+                tipo_recurso = "🎧 Audio"
+            elif "-DOC-" in codigo:
+                tipo_recurso = "📄 Documento"
+            else:
+                tipo_recurso = "📁 Recurso"
+            
             relaciones['recursos'].append({
-                'codigo': str(row.codigo),
-                'tipo': str(row.tipo),
-                'ruta': str(row.ruta)
+                'codigo': codigo,
+                'tipo': tipo_recurso,
+                'ruta': str(row.ruta) if row.ruta else ""
             })
-    except:
-        pass
+    except Exception as e:
+        print(f"  ❌ Error en query recursos: {str(e)}")
+    
+    # 4. Lugares en los que está ubicado (relación :ubicadoEn) - NUEVA CONSULTA
+    query_ubicado_en = f"""
+    PREFIX : <http://example.org/festividades#>
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    
+    SELECT ?lugarSuperior ?nombre
+    WHERE {{
+      <{uri_lugar}> :ubicadoEn ?lugarSuperior .
+      ?lugarSuperior rdfs:label ?nombre .
+    }}
+    """
+    
+    try:
+        resultados = list(grafo.query(query_ubicado_en))
+        print(f"  ✅ Lugares superiores encontrados: {len(resultados)}")
+        for row in resultados:
+            relaciones['ubicado_en'].append(str(row.nombre))
+    except Exception as e:
+        print(f"  ❌ Error en query ubicadoEn: {str(e)}")
+    
+    # Resumen final
+    print(f"  📊 Resumen para {uri_lugar.split('#')[-1]}:")
+    print(f"    • Eventos: {len(relaciones['eventos'])}")
+    print(f"    • Festividades: {len(relaciones['festividades'])}")
+    print(f"    • Recursos: {len(relaciones['recursos'])}")
+    print(f"    • Ubicado en: {len(relaciones['ubicado_en'])}")
     
     return relaciones
 
