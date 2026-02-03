@@ -1,6 +1,4 @@
-# requirements.txt
 rdflib==6.3.2
 pandas==2.2.2
 folium==0.14.0
 streamlit-folium==0.15.1
-html5lib==1.1
