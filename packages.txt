@@ -1,4 +1,0 @@
-rdflib
-pandas
-folium
-streamlit-folium
