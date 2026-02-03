@@ -65,11 +65,14 @@ def obtener_relaciones_lugar(grafo, uri_lugar):
     }}
     """
     
-    for row in grafo.query(query_eventos):
-        relaciones['eventos'].append({
-            'nombre': str(row.nombre),
-            'descripcion': str(row.descripcion) if row.descripcion else None
-        })
+    try:
+        for row in grafo.query(query_eventos):
+            relaciones['eventos'].append({
+                'nombre': str(row.nombre),
+                'descripcion': str(row.descripcion) if row.descripcion else None
+            })
+    except:
+        pass
     
     # 2. Festividades que se celebran aquí
     query_festividades = f"""
@@ -85,13 +88,16 @@ def obtener_relaciones_lugar(grafo, uri_lugar):
     }}
     """
     
-    for row in grafo.query(query_festividades):
-        relaciones['festividades'].append({
-            'nombre': str(row.nombre),
-            'descripcion': str(row.descripcion) if row.descripcion else None
-        })
+    try:
+        for row in grafo.query(query_festividades):
+            relaciones['festividades'].append({
+                'nombre': str(row.nombre),
+                'descripcion': str(row.descripcion) if row.descripcion else None
+            })
+    except:
+        pass
     
-    # 3. Recursos multimedia que documentan este lugar
+    # 3. Recursos multimedia
     query_recursos = f"""
     PREFIX : <http://example.org/festividades#>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -116,80 +122,15 @@ def obtener_relaciones_lugar(grafo, uri_lugar):
     LIMIT 5
     """
     
-    for row in grafo.query(query_recursos):
-        relaciones['recursos'].append({
-            'codigo': str(row.codigo),
-            'tipo': str(row.tipo),
-            'ruta': str(row.ruta)
-        })
-    
-    # 4. Lugares en los que está ubicado
-    query_ubicado_en = f"""
-    PREFIX : <http://example.org/festividades#>
-    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-    
-    SELECT ?lugarSuperior ?nombre
-    WHERE {{
-      <{uri_lugar}> :ubicadoEn ?lugarSuperior .
-      ?lugarSuperior rdfs:label ?nombre .
-    }}
-    """
-    
-    for row in grafo.query(query_ubicado_en):
-        relaciones['ubicado_en'].append(str(row.nombre))
-    
-    # 5. Rutas que pasan por aquí
-    query_rutas = f"""
-    PREFIX : <http://example.org/festividades#>
-    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-    
-    SELECT ?ruta ?nombre ?descripcion
-    WHERE {{
-      {{
-        ?ruta a :Ruta ;
-              rdfs:label ?nombre ;
-              :conduceA <{uri_lugar}> .
-      }} UNION {{
-        ?ruta a :Ruta ;
-              rdfs:label ?nombre ;
-              :conectaCon <{uri_lugar}> .
-      }}
-      OPTIONAL {{ ?ruta :descripcionBreve ?descripcion . }}
-    }}
-    """
-    
-    for row in grafo.query(query_rutas):
-        relaciones['rutas'].append({
-            'nombre': str(row.nombre),
-            'descripcion': str(row.descripcion) if row.descripcion else None
-        })
-    
-    # 6. Naciones rituales relacionadas
-    query_naciones = f"""
-    PREFIX : <http://example.org/festividades#>
-    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-    
-    SELECT ?nacion ?nombre ?descripcion
-    WHERE {{
-      ?nacion a :NacionRitual ;
-              rdfs:label ?nombre .
-      
-      {{ ?nacion :relacionadoCon <{uri_lugar}> . }}
-      UNION
-      {{ ?nacion :tieneBaseEn <{uri_lugar}> . }}
-      UNION
-      {{ ?nacion :participaEnFestividad ?festividad .
-         ?festividad :SeCelebraEn <{uri_lugar}> . }}
-      
-      OPTIONAL {{ ?nacion :descripcionBreve ?descripcion . }}
-    }}
-    """
-    
-    for row in grafo.query(query_naciones):
-        relaciones['naciones'].append({
-            'nombre': str(row.nombre),
-            'descripcion': str(row.descripcion) if row.descripcion else None
-        })
+    try:
+        for row in grafo.query(query_recursos):
+            relaciones['recursos'].append({
+                'codigo': str(row.codigo),
+                'tipo': str(row.tipo),
+                'ruta': str(row.ruta)
+            })
+    except:
+        pass
     
     return relaciones
 
