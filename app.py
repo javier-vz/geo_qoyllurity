@@ -472,9 +472,17 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             tipo = lugar['tipo_general']
             icon_config = icon_configs.get(tipo, {'color': 'gray', 'icon': 'info-circle', 'prefix': 'fa'})
             
+            # CAMBIO CLAVE AQUÍ: Usar IFrame
             folium.Marker(
                 location=[lat, lon],
-                popup=folium.Popup(popup_html, max_width=350, max_height=500),
+                popup=folium.Popup(
+                    folium.IFrame(
+                        html=popup_html,
+                        width=350,  # Ancho en píxeles
+                        height=500  # Alto en píxeles
+                    ),
+                    max_width=350
+                ),
                 tooltip=f"📍 {lugar['nombre']}",
                 icon=folium.Icon(
                     color=icon_config['color'],
@@ -485,52 +493,99 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             
         else:
             # Múltiples lugares en mismo punto
-            # Crear popup que muestre todos
+            # Crear popup que muestre todos CON ELEMENTOS CLICKEABLES
             popup_html = f"""
-            <div style="width: 320px; font-family: Arial;">
+            <div style="width: 350px; font-family: Arial; max-height: 400px; overflow-y: auto;">
                 <div style="background: #f39c12; color: white; padding: 12px; border-radius: 5px 5px 0 0;">
                     <h3 style="margin: 0; font-size: 16px;">📍 {len(lugares)} lugares</h3>
                     <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">
-                        Misma ubicación
+                        Misma ubicación (haz click en cada uno)
                     </p>
                 </div>
-                <div style="padding: 12px; background: white; max-height: 350px; overflow-y: auto;">
+                <div style="padding: 12px; background: white;">
             """
             
-            # Añadir cada lugar
+            # Añadir cada lugar como elemento clickeable
             for i, lugar in enumerate(lugares):
                 icono = '📍'
                 if lugar['tipo_general'] == 'Localidad': icono = '🏘️'
                 elif lugar['tipo_general'] == 'Iglesia': icono = '⛪'
                 elif lugar['tipo_general'] == 'Santuario': icono = '🛐'
                 
-                popup_html += f"""
-                <div style="padding: 8px; margin: 6px 0; background: {'#f8f9fa' if i % 2 == 0 else 'white'}; 
-                            border-radius: 4px; border-left: 4px solid {'#3498db' if lugar['tipo_general'] == 'Localidad' else '#9b59b6'};">
-                    <div style="font-weight: bold; font-size: 14px; color: #2c3e50;">
-                        {icono} {html.escape(lugar['nombre'])}
+                # Obtener relaciones para mostrar info básica
+                relaciones = obtener_relaciones_lugar(grafo, lugar['uri'])
+                
+                # Crear contenido para cada lugar
+                lugar_html = f"""
+                <div onclick="window.parent.document.dispatchEvent(new CustomEvent('lugarClicked', {{detail: {{uri: '{lugar['uri']}', nombre: '{html.escape(lugar['nombre'])}'}}}}));"
+                     style="padding: 10px; margin: 8px 0; 
+                            background: {'#f8f9fa' if i % 2 == 0 else 'white'}; 
+                            border-radius: 6px; 
+                            border-left: 4px solid {'#3498db' if lugar['tipo_general'] == 'Localidad' else '#9b59b6'};
+                            cursor: pointer; 
+                            transition: all 0.2s;
+                            border: 1px solid #e0e0e0;"
+                     onmouseover="this.style.backgroundColor='#e3f2fd'; this.style.boxShadow='0 2px 5px rgba(0,0,0,0.1)';" 
+                     onmouseout="this.style.backgroundColor='{'#f8f9fa' if i % 2 == 0 else 'white'}'; this.style.boxShadow='none';">
+                    <div style="display: flex; align-items: center;">
+                        <div style="font-size: 20px; margin-right: 10px;">{icono}</div>
+                        <div>
+                            <div style="font-weight: bold; font-size: 14px; color: #2c3e50;">
+                                {html.escape(lugar['nombre'])}
+                            </div>
+                            <div style="font-size: 12px; color: #666; margin-top: 2px;">
+                                {lugar['tipo_general']} • Nivel {lugar['nivel']}
+                            </div>
+                        </div>
                     </div>
-                    <div style="font-size: 12px; color: #666; margin-top: 2px;">
-                        {lugar['tipo_general']}
+                    <div style="margin-top: 6px; font-size: 11px; color: #555; line-height: 1.4;">
+                        {html.escape(lugar['descripcion'][:80])}...
                     </div>
-                    <div style="margin-top: 4px; font-size: 11px; color: #888;">
-                        {html.escape(lugar['descripcion'][:60])}...
+                    
+                    <!-- Info adicional pequeña -->
+                    <div style="margin-top: 6px; display: flex; gap: 8px; font-size: 10px; color: #888;">
+                        {f'<span>🏘️ En: {html.escape(lugar["ubicado_en"])}</span>' if lugar['ubicado_en'] else ''}
+                        {f'<span>🎭 {len(relaciones["eventos"])} eventos</span>' if relaciones['eventos'] else ''}
+                        {f'<span>📁 {len(relaciones["recursos"])} recursos</span>' if relaciones['recursos'] else ''}
                     </div>
                 </div>
                 """
+                
+                popup_html += lugar_html
             
-            popup_html += """
+            popup_html += f"""
                 </div>
-                <div style="padding: 8px; background: #ecf0f1; border-top: 1px solid #ddd; font-size: 11px; color: #7f8c8d;">
-                    💡 <em>Coordenadas: {lat:.6f}, {lon:.6f}</em>
+                <div style="padding: 10px; background: #ecf0f1; border-top: 1px solid #ddd; font-size: 11px; color: #7f8c8d;">
+                    <div>💡 <em>Coordenadas: {lat:.6f}, {lon:.6f}</em></div>
+                    <div style="margin-top: 4px;">📍 <em>Haz click en cualquier lugar para ver detalles completos</em></div>
                 </div>
             </div>
-            """.format(lat=lat, lon=lon)
+            <script>
+            // JavaScript para manejar clics
+            document.addEventListener('DOMContentLoaded', function() {{
+                // Hacer todos los elementos del popup clickeables
+                document.body.style.pointerEvents = 'auto';
+                
+                // También permitir clics en texto
+                document.querySelectorAll('*').forEach(el => {{
+                    el.style.pointerEvents = 'auto';
+                    el.style.cursor = 'default';
+                }});
+            }});
+            </script>
+            """
             
             # Marcador especial para múltiples lugares
             folium.Marker(
                 location=[lat, lon],
-                popup=folium.Popup(popup_html, max_width=350, max_height=500),
+                popup=folium.Popup(
+                    folium.IFrame(
+                        html=popup_html,
+                        width=370,  # Un poco más ancho
+                        height=450  # Alto ajustado
+                    ),
+                    max_width=370
+                ),
                 tooltip=f"📍 {len(lugares)} lugares aquí",
                 icon=folium.Icon(
                     color='orange',
@@ -566,12 +621,27 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
                     fill=True,
                     fill_color=color_circulo,
                     fill_opacity=0.7,
-                    popup=folium.Popup(popup_circulo_html, max_width=350),
+                    popup=folium.Popup(
+                        folium.IFrame(
+                            html=popup_circulo_html,
+                            width=350,
+                            height=500
+                        ),
+                        max_width=350
+                    ),
                     tooltip=lugar['nombre']
                 ).add_to(mapa)
     
     # Añadir control de capas
     folium.LayerControl().add_to(mapa)
+    
+    # Añadir plugin para medir distancias (opcional)
+    plugins.MeasureControl(
+        position='bottomleft',
+        primary_length_unit='kilometers',
+        secondary_length_unit='meters',
+        primary_area_unit='sqkilometers'
+    ).add_to(mapa)
     
     return mapa
 
