@@ -710,68 +710,90 @@ else:
     
     # Panel de información de click
     # Panel de información de click - VERSIÓN MEJORADA
+    # En la sección después de st_folium(), REEMPLAZA el código actual con esto:
+
     if mapa_data and mapa_data.get("last_object_clicked"):
         clicked_lat = mapa_data["last_object_clicked"]["lat"]
         clicked_lon = mapa_data["last_object_clicked"]["lng"]
         
-        # Buscar TODOS los lugares cercanos (no solo el más cercano)
-        lugares_cercanos = []
+        # Buscar TODOS los lugares en ese punto exacto
+        lugares_en_punto = []
         
         for lugar in st.session_state.lugares_data:
             if lugar['lat'] and lugar['lon']:
-                distancia = ((lugar['lat'] - clicked_lat)**2 + (lugar['lon'] - clicked_lon)**2)**0.5
-                if distancia < 0.001:  # Radio de ~100 metros
-                    lugares_cercanos.append((lugar, distancia))
+                # Usar tolerancia muy pequeña para el mismo punto
+                if (abs(lugar['lat'] - clicked_lat) < 0.00001 and 
+                    abs(lugar['lon'] - clicked_lon) < 0.00001):
+                    lugares_en_punto.append(lugar)
         
-        if lugares_cercanos:
-            # Ordenar por distancia
-            lugares_cercanos.sort(key=lambda x: x[1])
+        if lugares_en_punto:
+            st.markdown("---")
             
-            # Si solo hay uno o el más cercano está mucho más cerca
-            if len(lugares_cercanos) == 1 or lugares_cercanos[0][1] < lugares_cercanos[1][1] * 0.5:
-                # Mostrar solo el más cercano
-                lugar_mas_cercano = lugares_cercanos[0][0]
-                st.session_state.last_clicked = lugar_mas_cercano
+            if len(lugares_en_punto) == 1:
+                # Un solo lugar
+                lugar = lugares_en_punto[0]
+                relaciones = obtener_relaciones_lugar(st.session_state.grafo, lugar['uri'])
                 
-                # Mostrar panel detallado (tu código actual)
-                st.markdown("---")
-                st.subheader(f"📋 {lugar_mas_cercano['nombre']}")
+                st.subheader(f"📍 {lugar['nombre']}")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Tipo", lugar['tipo_general'])
+                    st.write(f"**Nivel:** {lugar['nivel']}")
+                    if lugar['ubicado_en']:
+                        st.write(f"**Ubicado en:** {lugar['ubicado_en']}")
                 
-                # ... (mantén todo tu código actual de mostrar información)
+                with col2:
+                    st.metric("Coordenadas", f"{lugar['lat']:.6f}, {lugar['lon']:.6f}")
+                    st.write(f"**Tipo específico:** {lugar['tipo_especifico'] or 'N/A'}")
+                
+                st.write(f"**Descripción:** {lugar['descripcion']}")
+                
+                # Mostrar relaciones
+                if relaciones['eventos']:
+                    with st.expander(f"🎭 Eventos ({len(relaciones['eventos'])})"):
+                        for evento in relaciones['eventos']:
+                            st.write(f"**{evento['nombre']}**")
+                            if evento['descripcion']:
+                                st.caption(evento['descripcion'])
+                
+                if relaciones['festividades']:
+                    with st.expander(f"🎉 Festividades ({len(relaciones['festividades'])})"):
+                        for fest in relaciones['festividades']:
+                            st.write(f"**{fest['nombre']}**")
                 
             else:
-                # Múltiples lugares muy cercanos - mostrar selector
-                st.markdown("---")
-                st.subheader(f"📍 {len(lugares_cercanos)} lugares cercanos")
+                # Múltiples lugares - mostrar selector
+                st.subheader(f"📍 {len(lugares_en_punto)} lugares en este punto")
                 
-                # Crear tabs para cada lugar
-                tabs = st.tabs([f"📍 {l[0]['nombre']}" for l in lugares_cercanos[:3]])  # Máximo 3 tabs
+                # Selector para elegir qué lugar ver
+                opciones = [f"{l['nombre']} ({l['tipo_general']})" for l in lugares_en_punto]
+                seleccion = st.selectbox("Selecciona un lugar para ver detalles:", opciones)
                 
-                for i, (tab, (lugar, distancia)) in enumerate(zip(tabs, lugares_cercanos[:3])):
-                    with tab:
-                        relaciones = obtener_relaciones_lugar(st.session_state.grafo, lugar['uri'])
-                        
-                        # Mostrar info en columnas
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.metric("Tipo", lugar['tipo_general'])
-                            if lugar['ubicado_en']:
-                                st.write(f"**Ubicado en:** {lugar['ubicado_en']}")
-                        
-                        with col2:
-                            st.metric("Distancia", f"{distancia*111:.1f} km")  # 1° ≈ 111km
-                            st.write(f"**Coordenadas:** {lugar['lat']:.6f}, {lugar['lon']:.6f}")
-                        
-                        # Descripción
-                        st.write(f"**Descripción:** {lugar['descripcion']}")
-                        
-                        # Eventos si los hay
-                        if relaciones['eventos']:
-                            with st.expander(f"🎭 Eventos ({len(relaciones['eventos'])})"):
-                                for evento in relaciones['eventos']:
-                                    st.write(f"• **{evento['nombre']}**")
-                                    if evento['descripcion']:
-                                        st.caption(evento['descripcion'])
+                # Obtener el lugar seleccionado
+                idx = opciones.index(seleccion)
+                lugar_seleccionado = lugares_en_punto[idx]
+                relaciones = obtener_relaciones_lugar(st.session_state.grafo, lugar_seleccionado['uri'])
+                
+                # Mostrar detalles del lugar seleccionado
+                st.markdown(f"### {lugar_seleccionado['nombre']}")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Tipo", lugar_seleccionado['tipo_general'])
+                    st.write(f"**Nivel:** {lugar_seleccionado['nivel']}")
+                
+                with col2:
+                    st.metric("Coordenadas", f"{lugar_seleccionado['lat']:.6f}, {lugar_seleccionado['lon']:.6f}")
+                
+                st.write(f"**Descripción:** {lugar_seleccionado['descripcion']}")
+                
+                # Mostrar relaciones
+                if relaciones['eventos']:
+                    with st.expander(f"🎭 Eventos ({len(relaciones['eventos'])})"):
+                        for evento in relaciones['eventos']:
+                            st.write(f"**{evento['nombre']}**")
+                            if evento['descripcion']:
+                                st.caption(evento['descripcion'])
     
     # Leyenda del mapa
     st.markdown("---")
