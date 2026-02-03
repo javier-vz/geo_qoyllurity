@@ -13,6 +13,7 @@ import folium
 from streamlit_folium import st_folium
 from folium import plugins
 import html
+import math
 
 # Configuración de la página
 st.set_page_config(
@@ -475,6 +476,7 @@ def extraer_lugares(grafo):
     
     return resultados
 
+
 def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-71.97, zoom=10):
     """Crea un mapa Folium con popups enriquecidos"""
     
@@ -537,15 +539,12 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             tipo = lugar['tipo_general']
             icon_config = icon_configs.get(tipo, {'color': 'gray', 'icon': 'info-circle', 'prefix': 'fa'})
             
-            # CREAR POPUP CON IFRAME (SOLUCIÓN CLAVE)
+            # CREAR POPUP SIMPLE (vamos a simplificar)
             popup = folium.Popup(
-                folium.IFrame(
-                    html=popup_html,
-                    width=370,    # Ancho en píxeles
-                    height=500    # Alto en píxeles
-                ),
+                html=popup_html,
                 max_width=370,
-                parse_html=True   # Permitir HTML
+                max_height=500,
+                parse_html=True
             )
             
             folium.Marker(
@@ -568,7 +567,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
                      color: white; padding: 12px; border-radius: 5px 5px 0 0;">
                     <h3 style="margin: 0; font-size: 16px;">📍 {len(lugares)} lugares</h3>
                     <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">
-                        Misma ubicación (haz click en los números)
+                        Misma ubicación
                     </p>
                 </div>
                 <div style="padding: 12px; background: white;">
@@ -615,7 +614,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             
             popup_grupo_html += """
                     <p style="margin: 10px 0 0 0; font-size: 11px; color: #95a5a6; font-style: italic;">
-                        💡 Cada número corresponde a un marcador con popup individual
+                        💡 Los marcadores están desplazados para poder hacer click en cada uno
                     </p>
                 </div>
             </div>
@@ -623,11 +622,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             
             # Marcador central del grupo
             popup_grupo = folium.Popup(
-                folium.IFrame(
-                    html=popup_grupo_html,
-                    width=370,
-                    height=400
-                ),
+                html=popup_grupo_html,
                 max_width=370,
                 parse_html=True
             )
@@ -645,7 +640,6 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             
             # Crear marcadores separados para cada lugar (ligeramente desplazados)
             radio = 0.00015  # ~17 metros de separación
-            import math
             
             for i, lugar in enumerate(lugares):
                 # Calcular posición en círculo
@@ -664,14 +658,11 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
                 elif lugar['tipo_general'] == 'Santuario':
                     color_circulo = '#e74c3c'
                 
-                # Crear popup individual con IFRAME
+                # Crear popup individual
                 popup_individual = folium.Popup(
-                    folium.IFrame(
-                        html=popup_individual_html,
-                        width=370,
-                        height=500
-                    ),
+                    html=popup_individual_html,
                     max_width=370,
+                    max_height=500,
                     parse_html=True
                 )
                 
@@ -708,26 +699,9 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
                     ),
                     popup=popup_individual
                 ).add_to(mapa)
-                
-                # Línea conectora al punto central
-                folium.PolyLine(
-                    locations=[[lat, lon], [lat_circulo, lon_circulo]],
-                    color=color_circulo,
-                    weight=1,
-                    opacity=0.3,
-                    dash_array='5, 5'
-                ).add_to(mapa)
     
     # Añadir control de capas
     folium.LayerControl().add_to(mapa)
-    
-    # Añadir plugin para medir distancias (opcional)
-    plugins.MeasureControl(
-        position='bottomleft',
-        primary_length_unit='kilometers',
-        secondary_length_unit='meters',
-        primary_area_unit='sqkilometers'
-    ).add_to(mapa)
     
     return mapa
 
