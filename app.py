@@ -535,7 +535,201 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             popup_html = crear_popup_html(lugar, relaciones)
             
             tipo = lugar['tipo_general']
-            icon_config = icon_configs.get(tipo, {'color': 'gray
+            icon_config = icon_configs.get(tipo, {'color': 'gray', 'icon': 'info-circle', 'prefix': 'fa'})
+            
+            # CREAR POPUP CON IFRAME (SOLUCIÓN CLAVE)
+            popup = folium.Popup(
+                folium.IFrame(
+                    html=popup_html,
+                    width=370,    # Ancho en píxeles
+                    height=500    # Alto en píxeles
+                ),
+                max_width=370,
+                parse_html=True   # Permitir HTML
+            )
+            
+            folium.Marker(
+                location=[lat, lon],
+                popup=popup,
+                tooltip=f"📍 {lugar['nombre']}",
+                icon=folium.Icon(
+                    color=icon_config['color'],
+                    icon=icon_config['icon'],
+                    prefix=icon_config['prefix']
+                )
+            ).add_to(mapa)
+            
+        else:
+            # Múltiples lugares en mismo punto
+            # Primero, crear el popup que muestra todos los lugares
+            popup_grupo_html = f"""
+            <div style="width: 350px; font-family: Arial, sans-serif;">
+                <div style="background: linear-gradient(135deg, #f39c12, #e67e22); 
+                     color: white; padding: 12px; border-radius: 5px 5px 0 0;">
+                    <h3 style="margin: 0; font-size: 16px;">📍 {len(lugares)} lugares</h3>
+                    <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">
+                        Misma ubicación (haz click en los números)
+                    </p>
+                </div>
+                <div style="padding: 12px; background: white;">
+                    <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+                        <p style="margin: 0; font-size: 12px; color: #666;">
+                            <strong>📍 Coordenadas:</strong> {lat:.6f}, {lon:.6f}
+                        </p>
+                    </div>
+            """
+            
+            # Añadir cada lugar como elemento en la lista
+            for i, lugar in enumerate(lugares):
+                icono = '📍'
+                if lugar['tipo_general'] == 'Localidad': icono = '🏘️'
+                elif lugar['tipo_general'] == 'Iglesia': icono = '⛪'
+                elif lugar['tipo_general'] == 'Santuario': icono = '🛐'
+                
+                popup_grupo_html += f"""
+                    <div style="padding: 8px; margin: 6px 0; 
+                            background: {'#f8f9fa' if i % 2 == 0 else 'white'}; 
+                            border-radius: 4px; 
+                            border-left: 4px solid {'#3498db' if lugar['tipo_general'] == 'Localidad' else '#9b59b6'};">
+                        <div style="display: flex; align-items: center;">
+                            <div style="background: {'#3498db' if lugar['tipo_general'] == 'Localidad' else '#9b59b6'}; 
+                                 color: white; width: 24px; height: 24px; border-radius: 50%; 
+                                 display: flex; align-items: center; justify-content: center; 
+                                 margin-right: 10px; font-weight: bold;">
+                                {i+1}
+                            </div>
+                            <div>
+                                <div style="font-weight: bold; font-size: 14px; color: #2c3e50;">
+                                    {icono} {html.escape(lugar['nombre'])}
+                                </div>
+                                <div style="font-size: 12px; color: #666; margin-top: 2px;">
+                                    {lugar['tipo_general']} • Nivel {lugar['nivel']}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 6px; font-size: 11px; color: #555;">
+                            {html.escape(lugar['descripcion'][:80])}...
+                        </div>
+                    </div>
+                """
+            
+            popup_grupo_html += """
+                    <p style="margin: 10px 0 0 0; font-size: 11px; color: #95a5a6; font-style: italic;">
+                        💡 Cada número corresponde a un marcador con popup individual
+                    </p>
+                </div>
+            </div>
+            """
+            
+            # Marcador central del grupo
+            popup_grupo = folium.Popup(
+                folium.IFrame(
+                    html=popup_grupo_html,
+                    width=370,
+                    height=400
+                ),
+                max_width=370,
+                parse_html=True
+            )
+            
+            folium.Marker(
+                location=[lat, lon],
+                popup=popup_grupo,
+                tooltip=f"📍 Grupo de {len(lugares)} lugares",
+                icon=folium.Icon(
+                    color='orange',
+                    icon='layer-group',
+                    prefix='fa'
+                )
+            ).add_to(mapa)
+            
+            # Crear marcadores separados para cada lugar (ligeramente desplazados)
+            radio = 0.00015  # ~17 metros de separación
+            import math
+            
+            for i, lugar in enumerate(lugares):
+                # Calcular posición en círculo
+                angulo = (2 * math.pi * i) / len(lugares)
+                lat_circulo = lat + radio * math.cos(angulo)
+                lon_circulo = lon + radio * math.sin(angulo)
+                
+                # Obtener relaciones y crear popup individual
+                relaciones = obtener_relaciones_lugar(grafo, lugar['uri'])
+                popup_individual_html = crear_popup_html(lugar, relaciones)
+                
+                # Color según tipo
+                color_circulo = '#3498db'
+                if lugar['tipo_general'] == 'Iglesia':
+                    color_circulo = '#9b59b6'
+                elif lugar['tipo_general'] == 'Santuario':
+                    color_circulo = '#e74c3c'
+                
+                # Crear popup individual con IFRAME
+                popup_individual = folium.Popup(
+                    folium.IFrame(
+                        html=popup_individual_html,
+                        width=370,
+                        height=500
+                    ),
+                    max_width=370,
+                    parse_html=True
+                )
+                
+                # Crear círculo marcador con número
+                folium.CircleMarker(
+                    location=[lat_circulo, lon_circulo],
+                    radius=8,
+                    color=color_circulo,
+                    weight=2,
+                    fill=True,
+                    fill_color='white',
+                    fill_opacity=1,
+                    popup=popup_individual,
+                    tooltip=f"{i+1}. {lugar['nombre']}",
+                ).add_to(mapa)
+                
+                # Añadir número dentro del círculo
+                folium.Marker(
+                    location=[lat_circulo, lon_circulo],
+                    icon=folium.DivIcon(
+                        html=f"""
+                        <div style="
+                            font-weight: bold;
+                            font-size: 12px;
+                            color: {color_circulo};
+                            text-align: center;
+                            width: 30px;
+                        ">
+                            {i+1}
+                        </div>
+                        """,
+                        icon_size=(30, 30),
+                        icon_anchor=(15, 15)
+                    ),
+                    popup=popup_individual
+                ).add_to(mapa)
+                
+                # Línea conectora al punto central
+                folium.PolyLine(
+                    locations=[[lat, lon], [lat_circulo, lon_circulo]],
+                    color=color_circulo,
+                    weight=1,
+                    opacity=0.3,
+                    dash_array='5, 5'
+                ).add_to(mapa)
+    
+    # Añadir control de capas
+    folium.LayerControl().add_to(mapa)
+    
+    # Añadir plugin para medir distancias (opcional)
+    plugins.MeasureControl(
+        position='bottomleft',
+        primary_length_unit='kilometers',
+        secondary_length_unit='meters',
+        primary_area_unit='sqkilometers'
+    ).add_to(mapa)
+    
+    return mapa
 
 # -------------------------------------------------------------------
 # INTERFAZ STREAMLIT
