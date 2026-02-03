@@ -300,17 +300,36 @@ def crear_popup_html(lugar, relaciones):
             """
         html_content += "</div>"
     
-    # Pie de popup
+    # Pie de popup MODIFICADO para ser clickeable
     html_content += f"""
             <!-- Información adicional -->
             <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 10px; color: #95a5a6;">
                 <p style="margin: 0;">
-                    📌 Haz click fuera para cerrar<br>
+                    📌 <span style="cursor: pointer; text-decoration: underline; color: #3498db;" 
+                          onclick="event.stopPropagation(); console.log('Pop-up interactivo');">
+                          Haz click aquí para explorar
+                      </span><br>
                     URI: {lugar['uri'].split('#')[-1][:30]}...
                 </p>
             </div>
         </div>
     </div>
+    
+    <script>
+    // Permitir clics dentro del popup
+    document.addEventListener('click', function(e) {{
+        e.stopPropagation();
+    }}, true);
+    
+    // Hacer todos los elementos clickeables
+    document.querySelectorAll('div, p, span').forEach(function(el) {{
+        el.style.pointerEvents = 'auto';
+        el.addEventListener('click', function(e) {{
+            e.stopPropagation();
+            console.log('Elemento clickeado:', el.tagName);
+        }});
+    }});
+    </script>
     """
     
     return html_content
