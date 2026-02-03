@@ -287,15 +287,23 @@ def cargar_grafo_desde_url(url):
         return None, False, f"❌ Error: {str(e)}"
 
 def extraer_lugares(grafo):
-    """Extrae todos los lugares del grafo"""
+    """Extrae lugares del grafo - EVITANDO DUPLICADOS por producto cartesiano"""
+    
+    # CONSULTA CORREGIDA: Usar GROUP_CONCAT o tomar solo el primer valor
     query = """
     PREFIX : <http://example.org/festividades#>
     PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
     
-    SELECT DISTINCT ?uri ?nombre ?lat ?lon ?tipoEspecifico ?tipoGeneral 
-           ?descBreve ?nivelEmbeddings ?ubicadoEn ?nombreUbicadoEn
+    SELECT DISTINCT ?uri 
+           (MIN(?nombre) as ?primerNombre)  # Toma solo el primer nombre
+           ?lat ?lon 
+           (MIN(?tipoEspecifico) as ?primerTipoEspe)  # Primer tipo específico
+           ?tipoGeneral
+           (MIN(?descBreve) as ?primerDesc)  # Primera descripción
+           (MIN(?nivelEmbeddings) as ?primerNivel)  # Primer nivel
+           (MIN(?nombreUbicadoEn) as ?primerUbicadoEn)  # Primer lugar superior
     WHERE {
       ?uri rdf:type/rdfs:subClassOf* :Lugar ;
            rdfs:label ?nombre .
@@ -327,22 +335,31 @@ def extraer_lugares(grafo):
         ?ubicadoEn rdfs:label ?nombreUbicadoEn .
       }
     }
-    ORDER BY ?tipoGeneral ?nombre
+    GROUP BY ?uri ?lat ?lon ?tipoGeneral  # Agrupa por URI y coordenadas
+    ORDER BY ?tipoGeneral ?primerNombre
     """
     
     resultados = []
+    
     for row in grafo.query(query):
+        # Usar MIN() asegura un solo valor por propiedad
         resultados.append({
             'uri': str(row.uri),
-            'nombre': str(row.nombre),
+            'nombre': str(row.primerNombre) if row.primerNombre else "Sin nombre",
             'lat': float(row.lat) if row.lat else None,
             'lon': float(row.lon) if row.lon else None,
-            'tipo_especifico': str(row.tipoEspecifico) if row.tipoEspecifico else None,
+            'tipo_especifico': str(row.primerTipoEspe) if row.primerTipoEspe else None,
             'tipo_general': str(row.tipoGeneral),
-            'descripcion': str(row.descBreve) if row.descBreve else "Sin descripción",
-            'nivel': str(row.nivelEmbeddings) if row.nivelEmbeddings else "No especificado",
-            'ubicado_en': str(row.nombreUbicadoEn) if row.nombreUbicadoEn else None
+            'descripcion': str(row.primerDesc) if row.primerDesc else "Sin descripción",
+            'nivel': str(row.primerNivel) if row.primerNivel else "No especificado",
+            'ubicado_en': str(row.primerUbicadoEn) if row.primerUbicadoEn else None
         })
+    
+    print(f"📍 Lugares únicos extraídos: {len(resultados)}")
+    
+    # Debug: mostrar los primeros 5 lugares
+    for i, lugar in enumerate(resultados[:5]):
+        print(f"  {i+1}. {lugar['nombre']} - {lugar['uri']}")
     
     return resultados
 
