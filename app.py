@@ -526,7 +526,13 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             
             folium.Marker(
                 location=[lat, lon],
-                popup=folium.Popup(popup_html, max_width=350, max_height=500, parse_html=True),
+                popup=folium.Popup(
+                    html=popup_html,
+                    max_width=450,
+                    max_height=550,
+                    parse_html=True,
+                    sticky=True  # Esto ayuda a que se quede abierto
+                    ),
                 tooltip=f"📍 {lugar['nombre']}",
                 icon=folium.Icon(
                     color=icon_config['color'],
