@@ -408,10 +408,6 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
         'Lugar': {'color': 'green', 'icon': 'map-marker-alt', 'prefix': 'fa'}
     }
     
-    # --- NUEVO: Controlar coordenadas duplicadas ---
-    from collections import defaultdict
-    coordenadas_vistas = defaultdict(int)
-    
     # Añadir marcadores con popups enriquecidos
     for lugar in lugares_con_coords:
         # Obtener relaciones para este lugar
@@ -424,60 +420,17 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
         tipo = lugar['tipo_general']
         icon_config = icon_configs.get(tipo, {'color': 'gray', 'icon': 'info-circle', 'prefix': 'fa'})
         
-        # --- NUEVO: Manejar coordenadas duplicadas ---
-        coord_key = (round(lugar['lat'], 6), round(lugar['lon'], 6))
-        desplazamiento = 0
-        
-        # Si ya hay un marcador en estas coordenadas, desplazar ligeramente
-        if coordenadas_vistas[coord_key] > 0:
-            # Desplazar en un patrón circular
-            angle = coordenadas_vistas[coord_key] * 0.1  # Radianes
-            desplazamiento_lat = 0.001 * (coordenadas_vistas[coord_key] % 3)
-            desplazamiento_lon = 0.001 * (coordenadas_vistas[coord_key] // 3)
-            
-            lat_final = lugar['lat'] + desplazamiento_lat
-            lon_final = lugar['lon'] + desplazamiento_lon
-            desplazamiento = coordenadas_vistas[coord_key]
-        else:
-            lat_final = lugar['lat']
-            lon_final = lugar['lon']
-        
-        # Incrementar contador para estas coordenadas
-        coordenadas_vistas[coord_key] += 1
-        
-        # Añadir indicador de desplazamiento al tooltip si es necesario
-        tooltip_text = f"📍 {lugar['nombre']}"
-        if desplazamiento > 0:
-            tooltip_text += f" (desplazado {desplazamiento})"
-        
         # Crear marcador
         folium.Marker(
-            location=[lat_final, lon_final],
+            location=[lugar['lat'], lugar['lon']],
             popup=folium.Popup(popup_html, max_width=350, max_height=500),
-            tooltip=tooltip_text,
+            tooltip=f"📍 {lugar['nombre']}",
             icon=folium.Icon(
                 color=icon_config['color'],
                 icon=icon_config['icon'],
                 prefix=icon_config['prefix']
             )
         ).add_to(mapa)
-    
-    # --- NUEVO: Añadir capa de relieve (mejor visualización) ---
-    folium.TileLayer(
-        tiles='https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-        attr='OpenTopoMap',
-        name='🗺️ Topografía',
-        overlay=False,
-        control=True
-    ).add_to(mapa)
-    
-    folium.TileLayer(
-        tiles='Stamen Terrain',
-        attr='Stamen Terrain',
-        name='🏔️ Relieve',
-        overlay=False,
-        control=True
-    ).add_to(mapa)
     
     # Añadir clustering para muchos marcadores
     if len(lugares_con_coords) > 15:
@@ -510,9 +463,6 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     
     # Añadir control de capas
     folium.LayerControl().add_to(mapa)
-    
-    # --- NUEVO: Añadir mini mapa ---
-    plugins.MiniMap(position='bottomright').add_to(mapa)
     
     return mapa
 
