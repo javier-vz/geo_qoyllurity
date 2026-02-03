@@ -536,55 +536,108 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             ).add_to(mapa)
             
         else:
-            # MÚLTIPLES lugares en mismo punto - SOLUCIÓN SIMPLE
-            # Crear UN SOLO marcador que al hacer click muestra TODOS los lugares
-            
-            # Crear contenido del popup con todos los lugares
+            # MÚLTIPLES lugares - MOSTRAR TODO EN UN SOLO POPUP COMPLETO
+            # Crear popup que muestra TODA la información de todos los lugares
             popup_html = f"""
-            <div style="width: 350px; font-family: Arial; max-height: 400px; overflow-y: auto;">
-                <div style="background: #f39c12; color: white; padding: 12px; border-radius: 5px 5px 0 0;">
-                    <h3 style="margin: 0; font-size: 16px;">📍 {len(lugares)} lugares</h3>
+            <div style="width: 420px; font-family: Arial; max-height: 500px; overflow-y: auto;">
+                <div style="background: linear-gradient(135deg, #f39c12, #e67e22); color: white; padding: 12px; border-radius: 5px 5px 0 0;">
+                    <h3 style="margin: 0; font-size: 16px;">📍 {len(lugares)} lugares aquí</h3>
                     <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">
-                        Misma ubicación
+                        Coordenadas: {lat:.6f}, {lon:.6f}
                     </p>
                 </div>
-                <div style="padding: 12px; background: white;">
+                <div style="padding: 10px; background: #f9f9f9;">
             """
             
-            # Añadir cada lugar
+            # Para cada lugar, mostrar su información COMPLETA
             for i, lugar in enumerate(lugares):
-                icono = '📍'
-                if lugar['tipo_general'] == 'Localidad': icono = '🏘️'
-                elif lugar['tipo_general'] == 'Iglesia': icono = '⛪'
-                elif lugar['tipo_general'] == 'Santuario': icono = '🛐'
+                # Obtener relaciones para este lugar
+                relaciones = obtener_relaciones_lugar(grafo, lugar['uri'])
                 
+                # Determinar color según tipo
+                color_lugar = '#3498db' if lugar['tipo_general'] == 'Localidad' else '#9b59b6'
+                
+                # Icono según tipo
+                icono_lugar = '🏘️' if lugar['tipo_general'] == 'Localidad' else '⛪'
+                
+                # Sección para este lugar
                 popup_html += f"""
-                <div style="padding: 8px; margin: 6px 0; background: {'#f8f9fa' if i % 2 == 0 else 'white'}; 
-                            border-radius: 4px; border-left: 4px solid {'#3498db' if lugar['tipo_general'] == 'Localidad' else '#9b59b6'};">
-                    <div style="font-weight: bold; font-size: 14px; color: #2c3e50;">
-                        {icono} {html.escape(lugar['nombre'])}
+                <div style="background: white; border-radius: 6px; padding: 10px; margin-bottom: 10px; 
+                            border-left: 4px solid {color_lugar}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    
+                    <!-- Encabezado del lugar -->
+                    <div style="display: flex; align-items: center; margin-bottom: 6px;">
+                        <div style="background: {color_lugar}; color: white; width: 24px; height: 24px; 
+                                 border-radius: 50%; display: flex; align-items: center; 
+                                 justify-content: center; margin-right: 8px; font-weight: bold; font-size: 12px;">
+                            {i+1}
+                        </div>
+                        <div>
+                            <h4 style="margin: 0; font-size: 14px; color: #2c3e50;">
+                                {icono_lugar} {html.escape(lugar['nombre'])}
+                            </h4>
+                            <p style="margin: 2px 0 0 0; font-size: 11px; color: #7f8c8d;">
+                                {lugar['tipo_general']} • Nivel {lugar['nivel']}
+                            </p>
+                        </div>
                     </div>
-                    <div style="font-size: 12px; color: #666; margin-top: 2px;">
-                        {lugar['tipo_general']} • Nivel {lugar['nivel']}
-                    </div>
-                    <div style="margin-top: 4px; font-size: 11px; color: #888;">
-                        {html.escape(lugar['descripcion'][:60])}...
-                    </div>
+                    
+                    <!-- Descripción -->
+                    <p style="margin: 6px 0; font-size: 12px; color: #34495e; line-height: 1.4;">
+                        {html.escape(lugar['descripcion'])}
+                    </p>
+                    
+                    <!-- Ubicado en -->
+                    {f'<p style="margin: 4px 0; font-size: 11px; color: #16a085;">📍 <strong>En:</strong> {html.escape(lugar["ubicado_en"])}</p>' if lugar['ubicado_en'] else ''}
+                    
+                    <!-- Eventos (solo si existen) -->
+                """
+                
+                # Añadir eventos si hay
+                if relaciones['eventos']:
+                    popup_html += f"""
+                    <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #eee;">
+                        <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: bold; color: #e74c3c;">🎭 Eventos:</p>
+                    """
+                    for evento in relaciones['eventos'][:2]:  # Máximo 2 eventos
+                        popup_html += f'<p style="margin: 2px 0; font-size: 10px; color: #555;">• {html.escape(evento["nombre"])}</p>'
+                    
+                    if len(relaciones['eventos']) > 2:
+                        popup_html += f'<p style="margin: 2px 0; font-size: 9px; color: #7f8c8d;">+ {len(relaciones["eventos"])-2} más</p>'
+                    
+                    popup_html += "</div>"
+                
+                # Añadir festividades si hay
+                if relaciones['festividades']:
+                    popup_html += f"""
+                    <div style="margin-top: 4px;">
+                        <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: bold; color: #9b59b6;">🎉 Festividades:</p>
+                    """
+                    for fest in relaciones['festividades']:
+                        popup_html += f'<p style="margin: 2px 0; font-size: 10px; color: #555;">• {html.escape(fest["nombre"])}</p>'
+                    
+                    popup_html += "</div>"
+                
+                # Cerrar div del lugar
+                popup_html += """
                 </div>
                 """
             
-            popup_html += f"""
+            # Cerrar el popup
+            popup_html += """
                 </div>
-                <div style="padding: 8px; background: #ecf0f1; border-top: 1px solid #ddd; font-size: 11px; color: #7f8c8d;">
-                    💡 <em>Coordenadas: {lat:.6f}, {lon:.6f}</em>
+                <div style="padding: 8px; background: #ecf0f1; border-top: 1px solid #ddd; text-align: center;">
+                    <p style="margin: 0; font-size: 10px; color: #7f8c8d;">
+                        💡 Toda la información visible - No es necesario hacer click
+                    </p>
                 </div>
             </div>
             """
             
-            # Solo UN marcador para el grupo
+            # Marcador especial para múltiples lugares
             folium.Marker(
                 location=[lat, lon],
-                popup=folium.Popup(popup_html, max_width=350, max_height=500, parse_html=True),
+                popup=folium.Popup(popup_html, max_width=450, max_height=550, parse_html=True),
                 tooltip=f"📍 {len(lugares)} lugares aquí",
                 icon=folium.Icon(
                     color='orange',
