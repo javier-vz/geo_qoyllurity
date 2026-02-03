@@ -382,7 +382,7 @@ def extraer_lugares(grafo):
     return resultados
 
 def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-71.97, zoom=10):
-    """Crea un mapa Folium con popups enriquecidos"""
+    """Crea un mapa Folium con popups enriquecidos - VERSIÓN CORREGIDA"""
     
     # Filtrar lugares con coordenadas
     lugares_con_coords = [l for l in lugares_data if l['lat'] and l['lon']]
@@ -390,28 +390,28 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     if not lugares_con_coords:
         return folium.Map(location=[center_lat, center_lon], zoom_start=zoom)
     
-    # Crear mapa base CON RELIEVE
+    # IMPORTANTE: Usar tiles que FUNCIONEN
+    # OpenStreetMap es el más confiable
     mapa = folium.Map(
         location=[center_lat, center_lon],
         zoom_start=zoom,
-        tiles='OpenTopoMap',  # Mapa con relieve por defecto
-        attr='OpenTopoMap',
+        tiles='OpenStreetMap',  # Tile confiable que siempre funciona
         control_scale=True
     )
     
-    # Añadir otras capas de mapa
+    # Añadir capas alternativas (pero OpenStreetMap como base)
     folium.TileLayer(
         tiles='CartoDB positron',
         attr='CartoDB',
-        name='🗺️ Mapa Base',
+        name='🗺️ Mapa Claro',
         overlay=False,
         control=True
     ).add_to(mapa)
     
     folium.TileLayer(
-        tiles='Stamen Terrain',
-        attr='Stamen Terrain',
-        name='🏔️ Relieve',
+        tiles='CartoDB dark_matter',
+        attr='CartoDB',
+        name='🌙 Mapa Oscuro',
         overlay=False,
         control=True
     ).add_to(mapa)
@@ -426,36 +426,32 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
         'Lugar': {'color': 'green', 'icon': 'map-marker-alt', 'prefix': 'fa'}
     }
     
-    # --- NUEVO: Agrupar lugares por coordenadas ---
+    # --- Agrupar lugares por coordenadas (solución simple) ---
     from collections import defaultdict
-    
-    # Agrupar lugares por coordenadas redondeadas
     lugares_por_coordenada = defaultdict(list)
     
     for lugar in lugares_con_coords:
-        # Redondear coordenadas para agrupar (6 decimales = ~0.1m precisión)
-        coord_key = (round(lugar['lat'], 6), round(lugar['lon'], 6))
+        # Redondear a 4 decimales (~11 metros) para agrupar
+        coord_key = (round(lugar['lat'], 4), round(lugar['lon'], 4))
         lugares_por_coordenada[coord_key].append(lugar)
     
-    # Añadir marcadores, agrupando si es necesario
-    for coord_key, lugares_en_mismo_punto in lugares_por_coordenada.items():
-        if len(lugares_en_mismo_punto) == 1:
-            # Solo un lugar en estas coordenadas
-            lugar = lugares_en_mismo_punto[0]
-            
-            # Obtener relaciones
+    # Añadir marcadores
+    for coord_key, lugares_en_punto in lugares_por_coordenada.items():
+        lat, lon = coord_key
+        
+        if len(lugares_en_punto) == 1:
+            # Un solo lugar en este punto
+            lugar = lugares_en_punto[0]
             relaciones = obtener_relaciones_lugar(grafo, lugar['uri'])
             popup_html = crear_popup_html(lugar, relaciones)
             
-            # Configurar icono
             tipo = lugar['tipo_general']
             icon_config = icon_configs.get(tipo, {'color': 'gray', 'icon': 'info-circle', 'prefix': 'fa'})
             
-            # Añadir marcador individual
             folium.Marker(
-                location=[lugar['lat'], lugar['lon']],
-                popup=folium.Popup(popup_html, max_width=350, max_height=500),
-                tooltip=f"📍 {lugar['nombre']}",
+                location=[lat, lon],
+                popup=folium.Popup(popup_html, max_width=350),
+                tooltip=f"{lugar['nombre']}",
                 icon=folium.Icon(
                     color=icon_config['color'],
                     icon=icon_config['icon'],
@@ -464,97 +460,56 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             ).add_to(mapa)
             
         else:
-            # MÚLTIPLES lugares en las mismas coordenadas
-            # Crear un popup combinado
-            nombres = [l['nombre'] for l in lugares_en_mismo_punto]
-            tipos = [l['tipo_general'] for l in lugares_en_mismo_punto]
+            # Múltiples lugares en mismo punto - MOSTRAR TODOS
+            # Determinar color principal
+            color_principal = 'blue'  # default
             
-            # Determinar el color principal (prioridad: Iglesia > Localidad > otros)
-            color_prioridad = {
-                'Iglesia': '#9b59b6',  # Púrpura
-                'Santuario': '#e74c3c', # Rojo
-                'Localidad': '#3498db', # Azul
-                'Glaciar': '#1abc9c',   # Verde azulado
-                'Ruta': '#e67e22',      # Naranja
-                'Lugar': '#2ecc71'      # Verde
-            }
-            
-            color_marcador = '#3498db'  # Default azul
-            for tipo in tipos:
-                if tipo in color_prioridad:
-                    color_marcador = color_prioridad[tipo]
+            # Prioridad de colores
+            for lugar in lugares_en_punto:
+                if lugar['tipo_general'] == 'Iglesia':
+                    color_principal = 'purple'
                     break
+                elif lugar['tipo_general'] == 'Santuario':
+                    color_principal = 'red'
+                    break
+                elif lugar['tipo_general'] == 'Localidad':
+                    color_principal = 'blue'
             
-            # Crear HTML para popup combinado
+            # Crear popup SIMPLE que funcione
+            nombres_html = ""
+            for i, lugar in enumerate(lugares_en_punto):
+                icono = '📍'
+                if lugar['tipo_general'] == 'Localidad':
+                    icono = '🏘️'
+                elif lugar['tipo_general'] == 'Iglesia':
+                    icono = '⛪'
+                elif lugar['tipo_general'] == 'Santuario':
+                    icono = '🛐'
+                
+                nombres_html += f'<div style="padding: 4px; border-bottom: 1px solid #eee;">{icono} <strong>{html.escape(lugar["nombre"])}</strong><br><small>{lugar["tipo_general"]}</small></div>'
+            
             popup_html = f"""
-            <div style="width: 320px; font-family: Arial, sans-serif; max-height: 400px; overflow-y: auto;">
-                <div style="background-color: {color_marcador}; color: white; padding: 10px; border-radius: 5px 5px 0 0;">
-                    <h3 style="margin: 0; font-size: 16px;">📍 Múltiples lugares</h3>
-                    <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">
-                        Misma ubicación ({len(lugares_en_mismo_punto)} lugares)
-                    </p>
+            <div style="width: 250px; font-family: Arial;">
+                <div style="background: {color_principal}; color: white; padding: 10px; border-radius: 5px 5px 0 0;">
+                    <strong>📍 {len(lugares_en_punto)} lugares</strong><br>
+                    <small>Misma ubicación</small>
                 </div>
-                
-                <div style="padding: 12px; background-color: #f9f9f9;">
-                    <div style="background-color: #ecf0f1; padding: 8px; border-radius: 4px; margin-bottom: 12px;">
-                        <p style="margin: 0; font-size: 12px; color: #2c3e50;">
-                            📍 Lat: {coord_key[0]:.6f}, Lon: {coord_key[1]:.6f}
-                        </p>
-                    </div>
-                    
-                    <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #2c3e50;">📌 Lugares en este punto:</h4>
-            """
-            
-            # Añadir cada lugar al popup combinado
-            for i, lugar in enumerate(lugares_en_mismo_punto[:5]):  # Máximo 5
-                icono_por_tipo = {
-                    'Localidad': '🏘️',
-                    'Iglesia': '⛪',
-                    'Santuario': '🛐',
-                    'Glaciar': '🏔️',
-                    'Ruta': '🛣️',
-                    'Lugar': '📍'
-                }
-                
-                icono = icono_por_tipo.get(lugar['tipo_general'], '📍')
-                
-                popup_html += f"""
-                    <div style="background-color: {'#e8f4f8' if i % 2 == 0 else '#ffffff'}; 
-                                padding: 6px; margin: 4px 0; border-radius: 3px; 
-                                border-left: 3px solid {color_marcador};">
-                        <p style="margin: 0; font-size: 12px; font-weight: bold;">
-                            {icono} {html.escape(lugar['nombre'])}
-                        </p>
-                        <p style="margin: 2px 0 0 0; font-size: 11px; color: #666;">
-                            {lugar['tipo_especifico'] or lugar['tipo_general']}
-                        </p>
-                    </div>
-                """
-            
-            if len(lugares_en_mismo_punto) > 5:
-                popup_html += f"""
-                    <p style="margin: 6px 0 0 0; font-size: 11px; color: #7f8c8d; text-align: center;">
-                        ... y {len(lugares_en_mismo_punto) - 5} más
-                    </p>
-                """
-            
-            popup_html += """
-                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 10px; color: #95a5a6;">
-                        <p style="margin: 0;">
-                            📌 Haz click en un marcador individual para ver detalles completos
-                        </p>
+                <div style="padding: 10px; background: white; max-height: 300px; overflow-y: auto;">
+                    {nombres_html}
+                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 11px; color: #777;">
+                        Lat: {lat:.4f}, Lon: {lon:.4f}
                     </div>
                 </div>
             </div>
             """
             
-            # Añadir marcador especial para múltiples lugares
+            # Marcador especial para múltiples lugares
             folium.Marker(
-                location=[coord_key[0], coord_key[1]],
-                popup=folium.Popup(popup_html, max_width=350, max_height=500),
-                tooltip=f"📍 {len(lugares_en_mismo_punto)} lugares",
+                location=[lat, lon],
+                popup=folium.Popup(popup_html, max_width=300),
+                tooltip=f"{len(lugares_en_punto)} lugares aquí",
                 icon=folium.Icon(
-                    color=color_marcador.replace('#', '').lower(),
+                    color=color_principal,
                     icon='layer-group',
                     prefix='fa'
                 )
@@ -562,9 +517,6 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     
     # Añadir control de capas
     folium.LayerControl().add_to(mapa)
-    
-    # Añadir mini mapa
-    plugins.MiniMap(position='bottomright').add_to(mapa)
     
     return mapa
 
