@@ -395,11 +395,6 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             "attr": "OpenStreetMap",
             "name": "Mapa básico"
         },
-        "Blanco y negro": {
-            "tiles": "https://tiles.wmflabs.org/bw-mapnik/{z}/{x}/{y}.png",
-            "attr": "OpenStreetMap",
-            "name": "Blanco y negro"
-        },
         "Claro": {
             "tiles": "https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png",
             "attr": "CartoDB",
