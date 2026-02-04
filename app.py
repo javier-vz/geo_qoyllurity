@@ -752,7 +752,7 @@ else:
 # 6. INFORMACIÓN DEL PROYECTO (DEBAJO DEL MAPA)
 # ============================================
 st.divider()
-st.markdown("### 📋 Información del Proyecto de Investigación")
+st.markdown("### Información del Proyecto de Investigación")
 
 col_proyecto1, col_proyecto2 = st.columns([1, 2])
 
