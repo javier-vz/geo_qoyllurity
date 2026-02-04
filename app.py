@@ -606,6 +606,71 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     # Añadir control de capas
     folium.LayerControl(position='topleft').add_to(mapa)
     
+    # ============================================
+    # CONTROL SIMPLE DE COORDENADAS
+    # ============================================
+    # Widget mínimo que siempre funciona
+    simple_coord_widget = '''
+    <div id="coord-container" style="
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        background: white;
+        border: 2px solid #2c3e50;
+        border-radius: 5px;
+        padding: 8px 12px;
+        font-family: monospace;
+        font-size: 12px;
+        z-index: 9999;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        min-width: 160px;
+    ">
+        <div style="color: #e74c3c; font-weight: bold; margin-bottom: 3px;">
+            <i class="fa fa-crosshairs"></i> Coordenadas
+        </div>
+        <div id="current-coords">
+            Lat: {lat:.6f}<br>
+            Lon: {lon:.6f}
+        </div>
+    </div>
+    
+    <script>
+    // Inicializar después de que el mapa se cargue
+    setTimeout(function() {{
+        // El objeto del mapa de Folium está en window
+        if (typeof window.currentMap !== 'undefined') {{
+            var map = window.currentMap;
+            
+            // Actualizar coordenadas al mover el mouse
+            map.on('mousemove', function(e) {{
+                var lat = e.latlng.lat.toFixed(6);
+                var lon = e.latlng.lng.toFixed(6);
+                document.getElementById('current-coords').innerHTML = 
+                    'Lat: ' + lat + '<br>Lon: ' + lon;
+            }});
+            
+            // Actualizar al hacer click también
+            map.on('click', function(e) {{
+                var lat = e.latlng.lat.toFixed(6);
+                var lon = e.latlng.lng.toFixed(6);
+                document.getElementById('current-coords').innerHTML = 
+                    'Lat: ' + lat + '<br>Lon: ' + lon;
+            }});
+            
+            console.log('Control de coordenadas activado');
+        }} else {{
+            console.warn('No se pudo acceder al objeto del mapa');
+            // Mostrar mensaje estático
+            document.getElementById('current-coords').innerHTML = 
+                'Lat: {lat:.6f}<br>Lon: {lon:.6f}<br>' +
+                '<small style="color: #888;">(Mueve el cursor)</small>';
+        }}
+    }}, 2000); // Esperar 2 segundos
+    </script>
+    '''.format(lat=center_lat, lon=center_lon)
+    
+    mapa.get_root().html.add_child(folium.Element(simple_coord_widget))
+    
     return mapa
 
 # -------------------------------------------------------------------
