@@ -25,13 +25,19 @@ st.set_page_config(
 # URL de la imagen
 IMAGEN_MONTAÑA_URL = "https://github.com/javier-vz/geo_qoyllurity/raw/main/imagenes/1750608881981.jpg"
 
-# Inicializar session state
+# ============================================
+# INICIALIZAR SESSION STATE (DEBE IR ANTES DE CUALQUIER OTRO CÓDIGO)
+# ============================================
+
+# Inicializar TODAS las variables de session state aquí
 if 'grafo_cargado' not in st.session_state:
     st.session_state.grafo_cargado = False
     st.session_state.lugares_data = []
     st.session_state.grafo = None
     st.session_state.last_clicked = None
     st.session_state.mapa_cargado = False
+    st.session_state.filtro_tipo = "Todos"  # <-- INICIALIZAR AQUÍ
+    st.session_state.lugares_filtrados = []
 
 # Namespaces
 EX = Namespace("http://example.org/festividades#")
@@ -363,70 +369,67 @@ def extraer_lugares(grafo):
     
     return resultados
 
-def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-71.97, zoom=10, estilo_mapa="Relieve"):
+def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-71.97, zoom=8, estilo_mapa="Relieve", lugares_destacados=None):
     """Crea un mapa Folium con múltiples estilos de mapa"""
     
+    # Filtrar lugares con coordenadas
     lugares_con_coords = [l for l in lugares_data if l['lat'] and l['lon']]
     
     if not lugares_con_coords:
         return folium.Map(location=[center_lat, center_lon], zoom_start=zoom)
     
-    # Seleccionar estilo de mapa según elección
-    if estilo_mapa == "Relieve":
-        tiles = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-        attr = "Esri, Maxar, Earthstar Geographics"
-        name = "Imagen satelital"
-    elif estilo_mapa == "Topográfico":
-        tiles = "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
-        attr = "OpenTopoMap"
-        name = "Mapa topográfico"
-    else:
-        tiles = "OpenStreetMap"
-        attr = "OpenStreetMap"
-        name = "OpenStreetMap"
+    # Configuración de estilos de mapa
+    tile_layers = {
+        "Relieve": {
+            "tiles": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            "attr": "Esri, Maxar, Earthstar Geographics",
+            "name": "Imagen satelital"
+        },
+        "Topográfico": {
+            "tiles": "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+            "attr": "OpenTopoMap",
+            "name": "Mapa topográfico"
+        },
+        "Mapa básico": {
+            "tiles": "OpenStreetMap",
+            "attr": "OpenStreetMap",
+            "name": "Mapa básico"
+        },
+        "Blanco y negro": {
+            "tiles": "https://tiles.stadiamaps.com/tiles/stamen_toner/{z}/{x}/{y}{r}.png",
+            "attr": "Stamen Toner",
+            "name": "Blanco y negro"
+        },
+        "Claro": {
+            "tiles": "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png",
+            "attr": "CartoDB",
+            "name": "Claro"
+        }
+    }
+    
+    # Obtener configuración del estilo seleccionado
+    estilo = tile_layers.get(estilo_mapa, tile_layers["Relieve"])
     
     # Crear mapa base
     mapa = folium.Map(
         location=[center_lat, center_lon],
         zoom_start=zoom,
-        tiles=tiles,
-        attr=attr,
+        tiles=estilo["tiles"],
+        attr=estilo["attr"],
         control_scale=True,
         prefer_canvas=True
     )
     
     # Añadir capas adicionales
-    folium.TileLayer(
-        tiles='OpenStreetMap',
-        attr='OpenStreetMap',
-        name='Mapa básico',
-        overlay=False,
-        control=True
-    ).add_to(mapa)
-    
-    folium.TileLayer(
-        tiles='Stamen Terrain',
-        attr='Stamen Terrain',
-        name='Relieve',
-        overlay=False,
-        control=True
-    ).add_to(mapa)
-    
-    folium.TileLayer(
-        tiles='Stamen Toner',
-        attr='Stamen Toner',
-        name='Blanco y negro',
-        overlay=False,
-        control=True
-    ).add_to(mapa)
-    
-    folium.TileLayer(
-        tiles='CartoDB positron',
-        attr='CartoDB',
-        name='Claro',
-        overlay=False,
-        control=True
-    ).add_to(mapa)
+    for estilo_nombre, config in tile_layers.items():
+        if estilo_nombre != estilo_mapa:  # No añadir la capa activa como overlay
+            folium.TileLayer(
+                tiles=config["tiles"],
+                attr=config["attr"],
+                name=config["name"],
+                overlay=False,
+                control=True
+            ).add_to(mapa)
     
     # Configurar iconos
     icon_configs = {
@@ -447,6 +450,9 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             key = (round(lugar['lat'], 5), round(lugar['lon'], 5))
             lugares_por_punto[key].append(lugar)
     
+    # Verificar si hay lugares destacados
+    lugares_destacados_uris = [l['uri'] for l in lugares_destacados] if lugares_destacados else []
+    
     # Para cada punto
     for (lat, lon), lugares in lugares_por_punto.items():
         if len(lugares) == 1:
@@ -458,6 +464,9 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             tipo = lugar['tipo_general']
             icon_config = icon_configs.get(tipo, {'color': 'gray', 'icon': 'info-circle'})
             
+            # Determinar si está destacado
+            is_destacado = lugar['uri'] in lugares_destacados_uris
+            
             # Crear iframe para el popup
             iframe = folium.IFrame(
                 html=popup_html,
@@ -466,7 +475,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             )
             
             # Crear marcador
-            folium.Marker(
+            marker = folium.Marker(
                 location=[lat, lon],
                 popup=folium.Popup(iframe, max_width=370),
                 tooltip=f"{lugar['nombre']}",
@@ -475,7 +484,22 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
                     icon=icon_config['icon'],
                     prefix='fa'
                 )
-            ).add_to(mapa)
+            )
+            
+            # Si está destacado, añadir efecto
+            if is_destacado:
+                # Crear un círculo alrededor del marcador
+                folium.CircleMarker(
+                    location=[lat, lon],
+                    radius=15,
+                    color=icon_config['color'],
+                    fill=True,
+                    fill_color=icon_config['color'],
+                    fill_opacity=0.3,
+                    weight=2
+                ).add_to(mapa)
+            
+            marker.add_to(mapa)
             
         else:
             # Múltiples lugares - crear popup especial
@@ -523,12 +547,19 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
                     <div style="padding: 12px;">
             """
             
+            # Verificar si alguno está destacado
+            hay_destacados = any(l['uri'] in lugares_destacados_uris for l in lugares)
+            
             # Añadir cada lugar
             for i, lugar in enumerate(lugares):
                 color_lugar = '#3498db' if lugar['tipo_general'] == 'Localidad' else '#9b59b6'
+                is_destacado = lugar['uri'] in lugares_destacados_uris
+                
+                # Resaltar si está destacado
+                border_style = "4px solid #ffcc00" if is_destacado else f"3px solid {color_lugar}"
                 
                 popup_html += f"""
-                <div class="lugar-card" style="border-left: 3px solid {color_lugar};">
+                <div class="lugar-card" style="border-left: {border_style};">
                     <div style="display: flex; align-items: center; margin-bottom: 6px;">
                         <div style="background: {color_lugar}; color: white; width: 22px; height: 22px; 
                                  border-radius: 50%; display: flex; align-items: center; 
@@ -538,6 +569,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
                         <div>
                             <div style="font-weight: 600; font-size: 13px; color: #2c3e50;">
                                 {html.escape(lugar['nombre'])}
+                                {" 🔸" if is_destacado else ""}
                             </div>
                             <div style="font-size: 11px; color: #666;">
                                 {lugar['tipo_general']}
@@ -560,12 +592,17 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
                 height=450
             )
             
+            # Si hay destacados, cambiar el icono del grupo
+            icon_color = 'orange'
+            if hay_destacados:
+                icon_color = 'red'  # Color especial para grupos con destacados
+            
             folium.Marker(
                 location=[lat, lon],
                 popup=folium.Popup(iframe_grupo, max_width=400),
-                tooltip=f"{len(lugares)} lugares",
+                tooltip=f"{len(lugares)} lugares" + (" (con destacados)" if hay_destacados else ""),
                 icon=folium.Icon(
-                    color='orange',
+                    color=icon_color,
                     icon='layer-group',
                     prefix='fa'
                 )
@@ -594,6 +631,8 @@ if not st.session_state.grafo_cargado:
             st.session_state.lugares_data = lugares
             st.session_state.grafo = grafo
             st.session_state.mapa_cargado = True
+            # Inicializar también lugares_filtrados
+            st.session_state.lugares_filtrados = lugares
         else:
             st.error(f"Error al cargar datos: {mensaje}")
 
@@ -621,7 +660,8 @@ with col_estilo:
     )
 
 with col_zoom:
-    zoom_level = st.slider("**Nivel de zoom**", 8, 15, 10)
+    # Cambié el zoom inicial de 10 a 8 para mostrar más área
+    zoom_level = st.slider("**Nivel de zoom**", 6, 15, 6)
 
 with col_lat:
     centro_lat = st.number_input("**Latitud**", value=-13.53, format="%.4f", key="lat_input")
@@ -642,14 +682,23 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ============================================
 if st.session_state.grafo_cargado:
     try:
+        # Filtrar lugares si hay un filtro activo
+        if st.session_state.filtro_tipo and st.session_state.filtro_tipo != "Todos":
+            lugares_a_mostrar = [l for l in st.session_state.lugares_data if l['tipo_general'] == st.session_state.filtro_tipo]
+            lugares_destacados = lugares_a_mostrar
+        else:
+            lugares_a_mostrar = st.session_state.lugares_data
+            lugares_destacados = None
+        
         # Crear el mapa
         mapa = crear_mapa_interactivo(
             st.session_state.grafo,
-            st.session_state.lugares_data,
+            lugares_a_mostrar,
             centro_lat,
             centro_lon,
             zoom_level,
-            estilo_mapa
+            estilo_mapa,
+            lugares_destacados
         )
         
         # Mostrar mapa
@@ -774,7 +823,7 @@ como `descripcionBreve` y `nivelEmbeddings` para su posterior uso en sistemas de
 """)
 
 # ============================================
-# 7. SIDEBAR CON IMAGEN LIGERA
+# 7. SIDEBAR CON IMAGEN LIGERA Y FILTROS CLICKEABLES
 # ============================================
 with st.sidebar:
     # Imagen simple en el sidebar
@@ -801,7 +850,54 @@ with st.sidebar:
     
     st.divider()
     
-    st.subheader("🎯 Tipos de lugares")
+    st.subheader("🎯 Filtros de lugares")
+    
+    # Opciones de filtro - asegurarnos de que tenemos los tipos únicos
+    tipos_unicos = list(set([l['tipo_general'] for l in st.session_state.lugares_data]))
+    tipos_unicos.sort()
+    opciones_filtro = ["Todos"] + tipos_unicos
+    
+    # Usar radio buttons para selección de filtro
+    # Verificar que el filtro actual esté en las opciones
+    filtro_actual = st.session_state.filtro_tipo
+    if filtro_actual not in opciones_filtro:
+        filtro_actual = "Todos"
+        st.session_state.filtro_tipo = "Todos"
+    
+    filtro_seleccionado = st.radio(
+        "Filtrar por tipo:",
+        opciones_filtro,
+        index=opciones_filtro.index(filtro_actual),
+        key="filtro_tipo_selector"
+    )
+    
+    # Actualizar el filtro si cambió
+    if filtro_seleccionado != st.session_state.filtro_tipo:
+        st.session_state.filtro_tipo = filtro_seleccionado
+        st.rerun()
+    
+    # Mostrar conteo para el filtro actual
+    if st.session_state.filtro_tipo != "Todos":
+        lugares_filtrados = [l for l in st.session_state.lugares_data if l['tipo_general'] == st.session_state.filtro_tipo]
+        st.info(f"**Mostrando {len(lugares_filtrados)} lugares de tipo: {st.session_state.filtro_tipo}**")
+    
+    # Botón para limpiar filtro
+    if st.session_state.filtro_tipo != "Todos":
+        if st.button("🧹 Mostrar todos los lugares", use_container_width=True):
+            st.session_state.filtro_tipo = "Todos"
+            st.rerun()
+    
+    st.divider()
+    
+    st.subheader("🎯 Tipos de lugares disponibles")
+    
+    # Mostrar tipos de lugares con conteos
+    tipos_conteo = {}
+    for lugar in st.session_state.lugares_data:
+        tipo = lugar['tipo_general']
+        if tipo not in tipos_conteo:
+            tipos_conteo[tipo] = 0
+        tipos_conteo[tipo] += 1
     
     tipos_lugares = [
         {"icono": "🏘️", "tipo": "Localidad", "descripcion": "Poblados y comunidades"},
@@ -812,20 +908,26 @@ with st.sidebar:
         {"icono": "📍", "tipo": "Lugar", "descripcion": "Otros espacios"}
     ]
     
+    # Mostrar solo los tipos que existen en los datos
     for tipo_info in tipos_lugares:
-        st.markdown(f"**{tipo_info['icono']} {tipo_info['tipo']}**")
-        st.caption(tipo_info['descripcion'])
-    
-    st.divider()
-    
-    st.subheader("📈 Distribución por tipo")
-    if st.session_state.grafo_cargado and st.session_state.lugares_data:
-        df_lugares = pd.DataFrame(st.session_state.lugares_data)
-        distribucion = df_lugares['tipo_general'].value_counts()
+        tipo = tipo_info['tipo']
+        conteo = tipos_conteo.get(tipo, 0)
         
-        for tipo, cantidad in distribucion.items():
-            porcentaje = (cantidad / total_lugares) * 100
-            st.markdown(f"• **{tipo}**: {cantidad} ({porcentaje:.1f}%)")
+        # Solo mostrar tipos que existen
+        if conteo > 0:
+            col_tipo1, col_tipo2 = st.columns([1, 4])
+            with col_tipo1:
+                # Botón para seleccionar este tipo
+                if st.button(f"{tipo_info['icono']}", key=f"btn_{tipo}", help=f"Filtrar por {tipo}"):
+                    st.session_state.filtro_tipo = tipo
+                    st.rerun()
+            with col_tipo2:
+                # Resaltar si es el filtro actual
+                if tipo == st.session_state.filtro_tipo:
+                    st.markdown(f"**▶️ {tipo}** ({conteo})")
+                else:
+                    st.markdown(f"{tipo} ({conteo})")
+                st.caption(tipo_info['descripcion'])
     
     st.divider()
     
@@ -839,4 +941,11 @@ with st.sidebar:
     """)
 
 # ============================================
-# 
+# 8. PIE DE PÁGINA
+# ============================================
+st.markdown("<br><br>", unsafe_allow_html=True)
+st.divider()
+st.caption("""
+**Mapa Interactivo del Señor de Qoyllur Rit'i** | Proyecto UTP 2026 | 
+Datos del grafo de conocimiento TTL | Información registrada 2025-2026 - En proceso de verificación
+""")
