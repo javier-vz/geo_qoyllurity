@@ -601,8 +601,8 @@ with st.sidebar:
             st.metric("Tipo Principal", tipo_mas_comun)
 
 # Contenido principal
-st.title("🗺️ Mapa Interactivo de la Festividad del Señor de Qoyllur Rit'i")
-st.markdown("### Explora lugares de a partir de información registrada durante 2025. Toda la informacipón es parcial, y puede contener errores.")
+st.title("Mapa Interactivo de la Festividad del Señor de Qoyllur Rit'i")
+st.markdown("### Explora lugares de a partir de información registrada durante 2025. Toda la información es parcial, y puede contener errores.")
 
 if not st.session_state.grafo_cargado:
     # Pantalla de bienvenida
