@@ -804,10 +804,6 @@ y documentación institucional, siguiendo protocolos éticos de consentimiento i
 confidencialidad.*
 """)
 
-# Nota adicional
-st.markdown("---")
-st.markdown("*Este proyecto forma parte de una investigación sobre la festividad del Señor de Qoyllur Rit'i, integrando métodos etnográficos con tecnologías de conocimiento semántico para la preservación del patrimonio cultural andino.*")
-
 # ============================================
 # 7. SIDEBAR CON INFORMACIÓN ADICIONAL
 # ============================================
