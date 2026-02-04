@@ -862,13 +862,3 @@ with st.sidebar:
     
     *Basado en el estándar del grafo TTL*
     """)
-
-# ============================================
-# 8. PIE DE PÁGINA DISCRETO
-# ============================================
-st.markdown("<br><br>", unsafe_allow_html=True)
-st.divider()
-st.caption("""
-**Mapa Interactivo del Señor de Qoyllur Rit'i** | Datos del grafo de conocimiento TTL | 
-Información registrada 2025 - En proceso de verificación
-""")
