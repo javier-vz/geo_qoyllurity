@@ -746,11 +746,8 @@ st.markdown("### Información del Proyecto de Investigación")
 col_proyecto1, col_proyecto2 = st.columns([1, 2])
 
 with col_proyecto1:
-    st.markdown("#### Responsable del Proyecto (y de posibles errores)")
+    st.markdown("#### Proyecto")
     st.markdown("""
-    **Javier Vera Zúñiga**
-    
-    *Investigador Principal*
     
     *"Grafos de conocimiento para la documentación de festividades andinas: 
     Señor de Qoyllur Rit'i y Virgen del Carmen de Paucartambo"*
@@ -759,22 +756,6 @@ with col_proyecto1:
     """)
     
 with col_proyecto2:
-    st.markdown("#### Equipo de Investigación")
-    
-    col_equipo1, col_equipo2 = st.columns(2)
-    
-    with col_equipo1:
-        st.markdown("**Paucartambo (Cusco)**")
-        st.markdown("""
-        
-        """)
-    
-    with col_equipo2:
-        st.markdown("**Lima**")
-        st.markdown("""
-        
-        """)
-    
     st.markdown("#### Objetivo Principal")
     st.markdown("""
     *Desarrollar una infraestructura basada en grafos de conocimiento para organizar y recuperar 
