@@ -26,7 +26,7 @@ st.set_page_config(
 IMAGEN_MONTAÑA_URL = "https://github.com/javier-vz/geo_qoyllurity/raw/main/imagenes/1750608881981.jpg"
 
 # ============================================
-# INICIALIZAR SESSION STATE (DEBE IR ANTES DE CUALQUIER OTRO CÓDIGO)
+# INICIALIZAR SESSION STATE
 # ============================================
 
 # Inicializar TODAS las variables de session state aquí
@@ -38,6 +38,8 @@ if 'grafo_cargado' not in st.session_state:
     st.session_state.mapa_cargado = False
     st.session_state.filtro_tipo = "Todos"
     st.session_state.lugares_filtrados = []
+    st.session_state.tipos_activos = []  # NUEVO: Tipos seleccionados
+    st.session_state.checkboxes_tipos = {}  # NUEVO: Estado de checkboxes
 
 # Namespaces
 EX = Namespace("http://example.org/festividades#")
@@ -46,11 +48,11 @@ RDFS = Namespace("http://www.w3.org/2000/01/rdf-schema#")
 RDF = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
 
 # -------------------------------------------------------------------
-# FUNCIONES DE CONSULTA RELACIONAL (MANTENIDAS)
+# FUNCIONES DE CONSULTA RELACIONAL
 # -------------------------------------------------------------------
 
 def obtener_relaciones_lugar(grafo, uri_lugar):
-    """Obtiene relaciones para un lugar - VERSIÓN CON AGRUPACIÓN"""
+    """Obtiene relaciones para un lugar"""
     
     nombre_lugar = uri_lugar.split('#')[-1] if '#' in uri_lugar else uri_lugar.split('/')[-1]
     
@@ -288,7 +290,7 @@ def crear_popup_html(lugar, relaciones):
     return html_content
 
 # -------------------------------------------------------------------
-# FUNCIONES PRINCIPALES (MANTENIDAS)
+# FUNCIONES PRINCIPALES
 # -------------------------------------------------------------------
 
 def cargar_grafo_desde_url(url):
@@ -301,7 +303,7 @@ def cargar_grafo_desde_url(url):
         return None, False, f"Error: {str(e)}"
 
 def extraer_lugares(grafo):
-    """Extrae lugares del grafo - EVITANDO DUPLICADOS por producto cartesiano"""
+    """Extrae lugares del grafo"""
     
     query = """
     PREFIX : <http://example.org/festividades#>
@@ -378,7 +380,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     if not lugares_con_coords:
         return folium.Map(location=[center_lat, center_lon], zoom_start=zoom)
     
-    # Configuración de estilos de mapa - CORREGIDO: usar tiles públicos
+    # Configuración de estilos de mapa
     tile_layers = {
         "Relieve": {
             "tiles": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -417,7 +419,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     
     # Añadir capas adicionales
     for estilo_nombre, config in tile_layers.items():
-        if estilo_nombre != estilo_mapa:  # No añadir la capa activa como overlay
+        if estilo_nombre != estilo_mapa:
             folium.TileLayer(
                 tiles=config["tiles"],
                 attr=config["attr"],
@@ -483,7 +485,6 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             
             # Si está destacado, añadir efecto
             if is_destacado:
-                # Crear un círculo alrededor del marcador
                 folium.CircleMarker(
                     location=[lat, lon],
                     radius=15,
@@ -590,7 +591,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             # Si hay destacados, cambiar el icono del grupo
             icon_color = 'orange'
             if hay_destacados:
-                icon_color = 'red'  # Color especial para grupos con destacados
+                icon_color = 'red'
             
             folium.Marker(
                 location=[lat, lon],
@@ -606,32 +607,44 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     # Añadir control de capas
     folium.LayerControl(position='topleft').add_to(mapa)
     
+    # Añadir widget de coordenadas
     from branca.element import Element
     
-    # Crear elemento HTML simple
-    coord_element = Element("""
+    coord_element = Element(f"""
     <div style="position: absolute; bottom: 20px; right: 20px; 
-                background: white; padding: 10px; border: 1px solid #ccc;
+                background: white; padding: 10px; border: 2px solid #2c3e50;
                 border-radius: 5px; font-family: monospace; font-size: 12px;
-                z-index: 9999;">
-        <b>Lat/Lon:</b><br>
-        <span id="show-coords">Mueve el mouse</span>
+                z-index: 9999; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+        <div style="color: #e74c3c; font-weight: bold; margin-bottom: 5px;">
+            <i class="fa fa-crosshairs"></i> Coordenadas
+        </div>
+        <div id="current-coords">
+            Lat: {center_lat:.6f}<br>
+            Lon: {center_lon:.6f}
+        </div>
     </div>
     
     <script>
-    // Intentar capturar eventos después de que el mapa cargue
-    setTimeout(function() {
-        var mapEl = document.querySelector('.folium-map');
-        if (mapEl) {
-            mapEl.addEventListener('mousemove', function(e) {
-                // Esto es solo para demostración - en producción
-                // necesitarías el objeto Leaflet real
-                document.getElementById('show-coords').textContent = 
-                    'Lat: ' + (e.offsetY / 100).toFixed(4) + 
-                    ', Lon: ' + (e.offsetX / 100).toFixed(4);
-            });
-        }
-    }, 3000);
+    // Actualizar coordenadas cuando el mapa esté listo
+    setTimeout(function() {{
+        if (typeof window.currentMap !== 'undefined') {{
+            var map = window.currentMap;
+            
+            map.on('mousemove', function(e) {{
+                var lat = e.latlng.lat.toFixed(6);
+                var lon = e.latlng.lng.toFixed(6);
+                document.getElementById('current-coords').innerHTML = 
+                    'Lat: ' + lat + '<br>Lon: ' + lon;
+            }});
+            
+            map.on('click', function(e) {{
+                var lat = e.latlng.lat.toFixed(6);
+                var lon = e.latlng.lng.toFixed(6);
+                document.getElementById('current-coords').innerHTML = 
+                    'Lat: ' + lat + '<br>Lon: ' + lon;
+            }});
+        }}
+    }}, 1000);
     </script>
     """)
     
@@ -640,7 +653,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     return mapa
 
 # -------------------------------------------------------------------
-# INTERFAZ STREAMLIT OPTIMIZADA
+# INTERFAZ STREAMLIT
 # -------------------------------------------------------------------
 
 # ============================================
@@ -656,25 +669,26 @@ if not st.session_state.grafo_cargado:
             st.session_state.grafo_cargado = True
             st.session_state.lugares_data = lugares
             st.session_state.grafo = grafo
-            st.session_state.mapa_cargado = True
-            # Inicializar también lugares_filtrados
-            st.session_state.lugares_filtrados = lugares
+            
+            # Inicializar tipos activos (todos por defecto)
+            tipos_unicos = list(set([l['tipo_general'] for l in lugares]))
+            st.session_state.tipos_activos = tipos_unicos
+            
+            # Inicializar checkboxes
+            for tipo in tipos_unicos:
+                st.session_state.checkboxes_tipos[tipo] = True
         else:
             st.error(f"Error al cargar datos: {mensaje}")
 
 # ============================================
 # 2. TÍTULO Y CONTROLES SIMPLES
 # ============================================
-# Título principal
 st.markdown("# Mapa Interactivo de la Festividad del Señor de Qoyllur Rit'i")
-
-# Subtítulo
 st.markdown("Exploración interactiva de lugares rituales basada en información registrada durante 2025-2026. La información es parcial y está en proceso de verificación.")
-
 st.divider()
 
 # ============================================
-# 3. CONTROLES DEL MAPA COMPACTOS
+# 3. CONTROLES DEL MAPA
 # ============================================
 col_estilo, col_zoom, col_lat, col_lon, col_centrar = st.columns([2, 2, 2, 2, 1])
 
@@ -686,8 +700,7 @@ with col_estilo:
     )
 
 with col_zoom:
-    # Cambié el zoom inicial de 10 a 8 para mostrar más área
-    zoom_level = st.slider("**Nivel de zoom**", 6, 15, 6)
+    zoom_level = st.slider("**Nivel de zoom**", 6, 15, 8)
 
 with col_lat:
     centro_lat = st.number_input("**Latitud**", value=-13.53, format="%.4f", key="lat_input")
@@ -698,7 +711,6 @@ with col_lon:
 with col_centrar:
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("🔄 **Centrar**", use_container_width=True, type="secondary"):
-        st.session_state.mapa_cargado = True
         st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
@@ -709,49 +721,39 @@ st.markdown("<br>", unsafe_allow_html=True)
 if st.session_state.grafo_cargado:
     try:
         # ============================================
-        # DETERMINAR QUÉ LUGARES MOSTRAR (USANDO FILTROS DEL SIDEBAR)
+        # DETERMINAR QUÉ LUGARES MOSTRAR
         # ============================================
         
         # Obtener todos los tipos únicos
         todos_tipos = list(set([l['tipo_general'] for l in st.session_state.lugares_data]))
         
-        # Verificar si hay filtro activo del sidebar
-        if hasattr(st.session_state, 'tipos_activos') and st.session_state.tipos_activos:
-            # Usar los tipos seleccionados en el sidebar
-            tipos_a_mostrar = st.session_state.tipos_activos
-            
-            # Filtrar lugares
-            lugares_a_mostrar = [
-                l for l in st.session_state.lugares_data 
-                if l['tipo_general'] in tipos_a_mostrar
-            ]
-            
-            # Determinar si debemos destacar (solo si no son todos los tipos)
-            if len(tipos_a_mostrar) < len(todos_tipos):
-                lugares_destacados = lugares_a_mostrar
-                # El mensaje de filtro ya se muestra en el sidebar
-            else:
-                lugares_destacados = None
-        else:
-            # Si no hay filtro definido, mostrar todos
+        # Si no hay tipos activos, mostrar todos
+        if not st.session_state.tipos_activos:
             lugares_a_mostrar = st.session_state.lugares_data
             lugares_destacados = None
+            mostrar_info_filtro = False
+        else:
+            # Filtrar lugares según tipos activos
+            lugares_a_mostrar = [
+                l for l in st.session_state.lugares_data 
+                if l['tipo_general'] in st.session_state.tipos_activos
+            ]
+            
+            # Solo destacar si no son todos los tipos
+            if len(st.session_state.tipos_activos) < len(todos_tipos):
+                lugares_destacados = lugares_a_mostrar
+                mostrar_info_filtro = True
+            else:
+                lugares_destacados = None
+                mostrar_info_filtro = False
+        
+        # Mostrar información del filtro si está activo
+        if mostrar_info_filtro and lugares_a_mostrar:
+            st.info(f"📍 **Filtro activo**: Mostrando {len(lugares_a_mostrar)} lugares de {len(st.session_state.lugares_data)} totales")
         
         # ============================================
-        # CREAR EL MAPA
+        # CREAR Y MOSTRAR EL MAPA
         # ============================================
-        # Crear el mapa
-        mapa = crear_mapa_interactivo(
-            st.session_state.grafo,
-            lugares_a_mostrar,
-            centro_lat,
-            centro_lon,
-            zoom_level,
-            estilo_mapa,
-            lugares_destacados
-        )
-        
-        # Crear el mapa
         mapa = crear_mapa_interactivo(
             st.session_state.grafo,
             lugares_a_mostrar,
@@ -770,9 +772,8 @@ if st.session_state.grafo_cargado:
             returned_objects=["last_clicked", "last_object_clicked"]
         )
         
-                
         # ============================================
-        # 5. INFORMACIÓN DE CLICK (DEBAJO DEL MAPA)
+        # 5. INFORMACIÓN DE CLICK
         # ============================================
         if mapa_data and mapa_data.get("last_object_clicked"):
             clicked_lat = mapa_data["last_object_clicked"]["lat"]
@@ -795,7 +796,6 @@ if st.session_state.grafo_cargado:
                     lugar = lugares_en_punto[0]
                     relaciones = obtener_relaciones_lugar(st.session_state.grafo, lugar['uri'])
                     
-                    # Mostrar información en columnas compactas
                     col_info1, col_info2 = st.columns([2, 1])
                     
                     with col_info1:
@@ -825,7 +825,6 @@ if st.session_state.grafo_cargado:
                                 st.markdown(f"**• {fest['nombre']}**")
                     
                 else:
-                    # Múltiples lugares
                     st.write(f"**Múltiples lugares ({len(lugares_en_punto)}) en esta ubicación**")
                     
                     opciones = [f"{l['nombre']} ({l['tipo_general']})" for l in lugares_en_punto]
@@ -859,10 +858,8 @@ col_proyecto1, col_proyecto2 = st.columns([1, 2])
 with col_proyecto1:
     st.markdown("#### Proyecto")
     st.markdown("""
-    
     *Grafos de conocimiento para la documentación de festividades andinas: 
     Señor de Qoyllur Rit'i y Virgen del Carmen de Paucartambo*
-    
     """)
     
 with col_proyecto2:
@@ -873,22 +870,19 @@ with col_proyecto2:
     y la Virgen del Carmen de Paucartambo.*
     """)
 
-# Nota metodológica
 st.markdown("#### Descripción técnica")
 st.markdown("""
-
 *Este mapa interactivo utiliza datos de un **grafo de conocimiento RDF/Turtle** que implementa una ontología específica para festividades andinas. 
 El modelo define clases como `Festividad`, `Lugar`, `EventoRitual` y `RecursoMedial`, utilizando propiedades como `SeCelebraEn` e `estaEnLugar` para 
 estructurar la información. Los datos actuales representan entidades concretas (individuos) como `Paucartambo` o `Sinakara`, anotadas con metadatos 
-como `descripcionBreve` y `nivelEmbeddings` para su posterior uso en sistemas de recuperación de información. El grafo sigue convenciones de modelado
- estrictas para diferenciar eventos, tiempos y recursos, priorizando la claridad semántica sobre la complejidad técnica innecesaria.*
+como `descripcionBreve` y `nivelEmbeddings` para su posterior uso en sistemas de recuperación de información.*
 """)
 
 # ============================================
-# 7. SIDEBAR CON IMAGEN LIGERA Y FILTROS CLICKEABLES
+# 7. SIDEBAR CON FILTROS MEJORADOS
 # ============================================
 with st.sidebar:
-    # Imagen simple en el sidebar
+    # Imagen
     st.markdown(f"""
     <div style="text-align: center; margin-bottom: 15px;">
         <img src="{IMAGEN_MONTAÑA_URL}" style="width: 100%; border-radius: 8px;">
@@ -914,7 +908,6 @@ with st.sidebar:
     
     st.subheader("🎯 Filtros de lugares")
     
-    # Obtener tipos únicos de lugares
     if st.session_state.grafo_cargado:
         tipos_unicos = list(set([l['tipo_general'] for l in st.session_state.lugares_data]))
         tipos_unicos.sort()
@@ -929,103 +922,87 @@ with st.sidebar:
             'Lugar': '📍'
         }
         
-        # ============================================
-        # SOLUCIÓN ROBUSTA CON CHECKBOXES
-        # ============================================
-        
-        # Inicializar estados de checkboxes si no existen
-        if 'checkboxes_tipos' not in st.session_state:
-            st.session_state.checkboxes_tipos = {}
+        # Inicializar checkboxes si no existen
+        if not st.session_state.checkboxes_tipos:
             for tipo in tipos_unicos:
-                st.session_state.checkboxes_tipos[tipo] = True  # Todos seleccionados por defecto
+                st.session_state.checkboxes_tipos[tipo] = True
         
         st.markdown("**Seleccionar tipos a mostrar:**")
         
-        # Crear dos columnas para los checkboxes
-        col_chk1, col_chk2 = st.columns(2)
+        # Contenedor para checkboxes con actualización inmediata
         tipos_seleccionados = []
         
-        # Colocar checkboxes en las columnas
+        # Crear checkboxes
         for i, tipo in enumerate(tipos_unicos):
             icono = iconos_tipos.get(tipo, '📍')
             
-            # Elegir columna (alternar entre col1 y col2)
-            col_actual = col_chk1 if i % 2 == 0 else col_chk2
-            
-            # Crear checkbox con estado guardado
-            seleccionado = col_actual.checkbox(
+            # Crear checkbox
+            seleccionado = st.checkbox(
                 f"{icono} {tipo}",
-                value=st.session_state.checkboxes_tipos[tipo],
-                key=f"chk_{tipo}"  # Key único para cada checkbox
+                value=st.session_state.checkboxes_tipos.get(tipo, True),
+                key=f"chk_{tipo}",
+                on_change=lambda t=tipo: update_tipo_seleccionado(t)
             )
             
-            # Guardar estado
+            # Actualizar estado
             st.session_state.checkboxes_tipos[tipo] = seleccionado
             
-            # Si está seleccionado, agregar a la lista
             if seleccionado:
                 tipos_seleccionados.append(tipo)
         
-        # ============================================
+        # Función para actualizar tipos seleccionados
+        def update_tipo_seleccionado(tipo):
+            """Actualiza la lista de tipos activos cuando cambia un checkbox"""
+            # Recalcular qué tipos están seleccionados
+            tipos_seleccionados_actual = []
+            for t in tipos_unicos:
+                if st.session_state.checkboxes_tipos.get(t, False):
+                    tipos_seleccionados_actual.append(t)
+            
+            # Actualizar session state
+            st.session_state.tipos_activos = tipos_seleccionados_actual
+        
         # BOTONES DE CONTROL
-        # ============================================
         st.markdown("---")
         col_btn1, col_btn2 = st.columns(2)
         
         with col_btn1:
-            if st.button("✅ **Seleccionar todos**", 
-                        use_container_width=True, 
-                        type="secondary",
-                        help="Seleccionar todos los tipos de lugares"):
+            if st.button("✅ **Todos**", use_container_width=True, type="secondary"):
                 for tipo in tipos_unicos:
                     st.session_state.checkboxes_tipos[tipo] = True
+                st.session_state.tipos_activos = tipos_unicos.copy()
                 st.rerun()
         
         with col_btn2:
-            if st.button("❌ **Limpiar todos**", 
-                        use_container_width=True, 
-                        type="secondary",
-                        help="Deseleccionar todos los tipos"):
+            if st.button("❌ **Ninguno**", use_container_width=True, type="secondary"):
                 for tipo in tipos_unicos:
                     st.session_state.checkboxes_tipos[tipo] = False
+                st.session_state.tipos_activos = []
                 st.rerun()
         
-        # ============================================
-        # INFORMACIÓN DEL FILTRO ACTUAL
-        # ============================================
-        # Contar lugares según filtro
+        # Mostrar estadísticas del filtro actual
+        st.markdown("---")
         total_filtrado = len([l for l in st.session_state.lugares_data 
                             if l['tipo_general'] in tipos_seleccionados])
-        total_general = len(st.session_state.lugares_data)
         
-        # Mostrar estado del filtro
         if len(tipos_seleccionados) == len(tipos_unicos):
-            st.success(f"✅ **Mostrando todos los {total_general} lugares**")
+            st.success(f"✅ **Mostrando todos**")
+            st.caption(f"{total_filtrado} lugares visibles")
         elif tipos_seleccionados:
-            st.info(f"📍 **Filtro activo:** {len(tipos_seleccionados)} tipos seleccionados")
-            
-            # Barra de progreso para visualizar
-            porcentaje = (total_filtrado / total_general * 100) if total_general > 0 else 0
-            st.progress(porcentaje / 100)
-            st.caption(f"**{total_filtrado} de {total_general}** lugares visibles ({porcentaje:.1f}%)")
-            
-            # Mostrar qué tipos están seleccionados
-            if len(tipos_seleccionados) <= 3:
-                tipos_texto = ", ".join([f"**{t}**" for t in tipos_seleccionados])
-                st.caption(f"Tipos: {tipos_texto}")
+            st.info(f"📍 **Filtro activo**")
+            st.caption(f"{total_filtrado} de {total_lugares} lugares")
+            st.caption(f"{len(tipos_seleccionados)} de {len(tipos_unicos)} tipos")
         else:
-            st.warning("⚠️ **No hay tipos seleccionados**")
-            st.caption("Selecciona al menos un tipo para ver lugares en el mapa")
+            st.warning("⚠️ **Sin selección**")
+            st.caption("Selecciona al menos un tipo")
         
-        # Guardar los tipos seleccionados para usarlos en el mapa
+        # Actualizar tipos activos en session state
         st.session_state.tipos_activos = tipos_seleccionados
     
     st.divider()
     
-    # ============================================
-    # ESTADÍSTICAS POR TIPO (solo información)
-    # ============================================
-    st.subheader("🗺️ Tipos de lugares disponibles")
+    # Estadísticas por tipo
+    st.subheader("🗺️ Tipos disponibles")
     
     if st.session_state.grafo_cargado:
         # Contar lugares por tipo
@@ -1034,41 +1011,20 @@ with st.sidebar:
             tipo = lugar['tipo_general']
             conteo_por_tipo[tipo] = conteo_por_tipo.get(tipo, 0) + 1
         
-        # Mostrar estadísticas con formato
+        # Mostrar estadísticas
         for tipo in sorted(conteo_por_tipo.keys()):
             conteo = conteo_por_tipo[tipo]
             icono = iconos_tipos.get(tipo, '📍')
-            
-            # Calcular porcentaje
-            porcentaje = (conteo / total_lugares * 100) if total_lugares > 0 else 0
-            
-            # Barra de progreso pequeña
-            st.markdown(f"**{icono} {tipo}**: {conteo} lugares")
-            st.progress(porcentaje / 100, text=f"{porcentaje:.1f}%")
+            st.markdown(f"**{icono} {tipo}**: {conteo}")
     
     st.divider()
     
-    # ============================================
-    # INFORMACIÓN ADICIONAL
-    # ============================================
     st.subheader("ℹ️ Niveles de importancia")
     st.markdown("""
     **A**: Entidades centrales  
     **B**: Contextuales  
     **C**: Estructurales
-    
-    *Basado en el estándar del grafo TTL*
     """)
-    
-    # Información adicional sobre el filtro
-    with st.expander("💡 **Cómo usar los filtros**"):
-        st.markdown("""
-        1. **Selecciona los tipos** que quieres ver usando los checkboxes
-        2. Usa **✅ Seleccionar todos** para mostrar todos los tipos
-        3. Usa **❌ Limpiar todos** para ocultar todos los tipos
-        4. El mapa se actualiza automáticamente
-        5. Puedes combinar múltiples tipos
-        """)
 
 # ============================================
 # 8. PIE DE PÁGINA
