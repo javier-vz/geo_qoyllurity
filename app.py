@@ -749,10 +749,9 @@ with col_proyecto1:
     st.markdown("#### Proyecto")
     st.markdown("""
     
-    *"Grafos de conocimiento para la documentación de festividades andinas: 
-    Señor de Qoyllur Rit'i y Virgen del Carmen de Paucartambo"*
+    *Grafos de conocimiento para la documentación de festividades andinas: 
+    Señor de Qoyllur Rit'i y Virgen del Carmen de Paucartambo*
     
-    Universidad Tecnológica del Perú (UTP)
     """)
     
 with col_proyecto2:
