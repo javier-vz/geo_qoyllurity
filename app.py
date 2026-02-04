@@ -882,25 +882,16 @@ with st.sidebar:
         # Crear opciones con iconos
         opciones_con_iconos = [f"{iconos_tipos.get(tipo, '📍')} {tipo}" for tipo in tipos_unicos]
         
-        # Inicializar en session_state si no existe
-        if 'tipos_seleccionados' not in st.session_state:
-            st.session_state.tipos_seleccionados = []
-        
-        # st.multiselect que guarda en session_state
+        # CORRECCIÓN: No usar session_state en default, usar lista vacía []
         tipos_seleccionados = st.multiselect(
             "**Seleccionar tipos a mostrar:**",
             opciones_con_iconos,
-            default=st.session_state.tipos_seleccionados,  # Usar session_state
+            default=[],  # <-- CORRECCIÓN: lista vacía por defecto
             help="Deja vacío para mostrar todos los tipos. Selecciona tipos específicos para filtrar."
         )
         
-        # Actualizar session_state cuando cambia la selección
-        if tipos_seleccionados != st.session_state.tipos_seleccionados:
-            st.session_state.tipos_seleccionados = tipos_seleccionados
-            st.rerun()
-        
         # Convertir de nuevo a tipos simples (sin iconos) para usar en el filtro
-        tipos_simples = [tipo.replace("🏘️ ", "").replace("⛪ ", "").replace("🏔️ ", "").replace("✝️ ", "").replace("🛣️ ", "").replace("📍 ", "") for tipo in st.session_state.tipos_seleccionados]
+        tipos_simples = [tipo.replace("🏘️ ", "").replace("⛪ ", "").replace("🏔️ ", "").replace("✝️ ", "").replace("🛣️ ", "").replace("📍 ", "") for tipo in tipos_seleccionados]
         
         # Guardar tipos_simples en session_state para usar fuera del sidebar
         st.session_state.tipos_simples_filtro = tipos_simples
