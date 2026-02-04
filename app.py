@@ -16,7 +16,7 @@ import math
 
 # Configuración de la página
 st.set_page_config(
-    page_title="Mapa del Señor de Qoyllur Rit'i",
+    page_title="Mapa de la Festividad del Señor de Qoyllur Rit'i",
     page_icon="⛰️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -604,7 +604,7 @@ if not st.session_state.grafo_cargado:
 st.markdown("# Mapa Interactivo de la Festividad del Señor de Qoyllur Rit'i")
 
 # Subtítulo
-st.markdown("Exploración interactiva de lugares rituales basada en información registrada durante 2025. La información es parcial y está en proceso de verificación.")
+st.markdown("Exploración interactiva de lugares rituales basada en información registrada durante 2025-2026. La información es parcial y está en proceso de verificación.")
 
 st.divider()
 
@@ -741,57 +741,41 @@ else:
 # 6. INFORMACIÓN DEL PROYECTO
 # ============================================
 st.divider()
-st.markdown("### 📋 Información del Proyecto de Investigación")
+st.markdown("### Información del Proyecto de Investigación")
 
 col_proyecto1, col_proyecto2 = st.columns([1, 2])
 
 with col_proyecto1:
-    st.markdown("#### 👤 Responsable del Proyecto")
+    st.markdown("#### 👤 Responsable del Proyecto (y de posibles errores)")
     st.markdown("""
     **Javier Vera Zúñiga**
     
     *Investigador Principal*
     
-    Proyecto: *"Grafos de conocimiento para la documentación de festividades andinas: 
+    *"Grafos de conocimiento para la documentación de festividades andinas: 
     Señor de Qoyllur Rit'i y Virgen del Carmen de Paucartambo"*
     
     Universidad Tecnológica del Perú (UTP)
     """)
     
-    st.markdown("#### 🌐 Proyecto UTP 2026")
-    st.markdown("""
-    - **Categoría:** Nivel 2
-    - **Línea de investigación:** Computación Científica
-    - **ODS principales:** 11, 10, 9, 4
-    - **Tipo:** Investigación en Ciencias Aplicadas
-    """)
-
 with col_proyecto2:
-    st.markdown("#### 🤝 Equipo de Investigación")
+    st.markdown("#### Equipo de Investigación")
     
     col_equipo1, col_equipo2 = st.columns(2)
     
     with col_equipo1:
-        st.markdown("**🏔️ Paucartambo (Cusco)**")
+        st.markdown("**Paucartambo (Cusco)**")
         st.markdown("""
-        - Comunidades locales participantes
-        - Portadores de roles rituales
-        - Autoridades tradicionales
-        - Guías y coordinadores locales
-        - Registradores de campo comunitarios
+        
         """)
     
     with col_equipo2:
-        st.markdown("**🏛️ Lima**")
+        st.markdown("**Lima**")
         st.markdown("""
-        - Equipo de investigación UTP
-        - Especialistas en ciencia de datos
-        - Asesores académicos patrimoniales
-        - Desarrolladores de software
-        - Tesistas de ingeniería
+        
         """)
     
-    st.markdown("#### 🎯 Objetivo Principal")
+    st.markdown("#### Objetivo Principal")
     st.markdown("""
     *Desarrollar una infraestructura basada en grafos de conocimiento para organizar y recuperar 
     información patrimonial compleja asociada a las festividades del Señor de Qoyllur Rit'i 
