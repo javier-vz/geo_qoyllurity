@@ -752,35 +752,57 @@ else:
 # 6. INFORMACIÓN DEL PROYECTO (DEBAJO DEL MAPA)
 # ============================================
 st.divider()
-st.markdown("### Información del Proyecto")
+st.markdown("### 📋 Información del Proyecto de Investigación")
 
-col_proyecto1, col_proyecto2, col_proyecto3 = st.columns(3)
+col_proyecto1, col_proyecto2 = st.columns([1, 2])
 
 with col_proyecto1:
-    st.markdown("**Responsable del Proyecto**")
+    st.markdown("#### Responsable del Proyecto")
     st.markdown("""
     **Javier Vera Zúñiga**
     
-    Investigador principal y desarrollador
+    *Investigador Principal*
+    
+    Proyecto: *"Grafos de conocimiento para la documentación de festividades andinas: 
+    Señor de Qoyllur Rit'i y Virgen del Carmen de Paucartambo"*
+    
+    Universidad Tecnológica del Perú (UTP)
     """)
+    
 
 with col_proyecto2:
-    st.markdown("**Colaboradores en Paucartambo**")
+    st.markdown("#### Equipo de Investigación")
+    
+    col_equipo1, col_equipo2 = st.columns(2)
+    
+    with col_equipo1:
+        st.markdown("**🏔️ Paucartambo (Cusco)**")
+        st.markdown("""
+        -
+        """)
+    
+    with col_equipo2:
+        st.markdown("**🏛️ Lima**")
+        st.markdown("""
+        - 
+        """)
+    
+    st.markdown("#### Objetivo Principal")
     st.markdown("""
-    - Comunidades locales
-    - Guías rituales
-    - Autoridades tradicionales
-    - Registradores de campo
+    *Desarrollar una infraestructura basada en grafos de conocimiento para organizar y recuperar 
+    información patrimonial compleja asociada a las festividades del Señor de Qoyllur Rit'i 
+    y la Virgen del Carmen de Paucartambo.*
     """)
 
-with col_proyecto3:
-    st.markdown("**Colaboradores en Lima**")
-    st.markdown("""
-    - Equipo de investigación
-    - Especialistas en datos
-    - Asesores académicos
-    - Desarrolladores
-    """)
+# Nota metodológica
+st.markdown("---")
+st.markdown("""
+*Este mapa interactivo forma parte del sistema de visualización del proyecto de investigación, 
+mostrando los lugares rituales documentados en el grafo de conocimiento. La información presentada 
+se basa en datos recopilados durante 2025-2026 mediante trabajo de campo, entrevistas estructuradas 
+y documentación institucional, siguiendo protocolos éticos de consentimiento informado y 
+confidencialidad.*
+""")
 
 # Nota adicional
 st.markdown("---")
