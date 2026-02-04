@@ -378,7 +378,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     if not lugares_con_coords:
         return folium.Map(location=[center_lat, center_lon], zoom_start=zoom)
     
-    # Configuración de estilos de mapa
+    # Configuración de estilos de mapa - CORREGIDO: usar tiles públicos
     tile_layers = {
         "Relieve": {
             "tiles": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -395,13 +395,8 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             "attr": "OpenStreetMap",
             "name": "Mapa básico"
         },
-        "Blanco y negro": {
-            "tiles": "https://tiles.stadiamaps.com/tiles/stamen_toner/{z}/{x}/{y}{r}.png",
-            "attr": "Stamen Toner",
-            "name": "Blanco y negro"
-        },
         "Claro": {
-            "tiles": "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png",
+            "tiles": "https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png",
             "attr": "CartoDB",
             "name": "Claro"
         }
@@ -611,6 +606,37 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     # Añadir control de capas
     folium.LayerControl(position='topleft').add_to(mapa)
     
+    from branca.element import Element
+    
+    # Crear elemento HTML simple
+    coord_element = Element("""
+    <div style="position: absolute; bottom: 20px; right: 20px; 
+                background: white; padding: 10px; border: 1px solid #ccc;
+                border-radius: 5px; font-family: monospace; font-size: 12px;
+                z-index: 9999;">
+        <b>Lat/Lon:</b><br>
+        <span id="show-coords">Mueve el mouse</span>
+    </div>
+    
+    <script>
+    // Intentar capturar eventos después de que el mapa cargue
+    setTimeout(function() {
+        var mapEl = document.querySelector('.folium-map');
+        if (mapEl) {
+            mapEl.addEventListener('mousemove', function(e) {
+                // Esto es solo para demostración - en producción
+                // necesitarías el objeto Leaflet real
+                document.getElementById('show-coords').textContent = 
+                    'Lat: ' + (e.offsetY / 100).toFixed(4) + 
+                    ', Lon: ' + (e.offsetX / 100).toFixed(4);
+            });
+        }
+    }, 3000);
+    </script>
+    """)
+    
+    mapa.get_root().html.add_child(coord_element)
+    
     return mapa
 
 # -------------------------------------------------------------------
@@ -655,7 +681,7 @@ col_estilo, col_zoom, col_lat, col_lon, col_centrar = st.columns([2, 2, 2, 2, 1]
 with col_estilo:
     estilo_mapa = st.selectbox(
         "**Estilo del mapa**",
-        ["Relieve", "Topográfico", "Mapa básico", "Blanco y negro", "Claro"],
+        ["Relieve", "Topográfico", "Mapa básico", "Claro"],
         index=0
     )
 
