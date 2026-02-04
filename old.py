@@ -16,11 +16,14 @@ import math
 
 # Configuración de la página
 st.set_page_config(
-    page_title="Mapa del Señor de Qoyllur Rit'i",
+    page_title="Mapa de la Festividad del Señor de Qoyllur Rit'i",
     page_icon="⛰️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# URL de la imagen
+IMAGEN_MONTAÑA_URL = "https://github.com/javier-vz/geo_qoyllurity/raw/main/imagenes/1750608881981.jpg"
 
 # Inicializar session state
 if 'grafo_cargado' not in st.session_state:
@@ -574,11 +577,11 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     return mapa
 
 # -------------------------------------------------------------------
-# INTERFAZ STREAMLIT REORGANIZADA - 2 COLUMNAS SUPERIORES
+# INTERFAZ STREAMLIT OPTIMIZADA
 # -------------------------------------------------------------------
 
 # ============================================
-# 1. CARGA AUTOMÁTICA DE DATOS (SILENCIOSA)
+# 1. CARGA AUTOMÁTICA DE DATOS
 # ============================================
 if not st.session_state.grafo_cargado:
     with st.spinner("Cargando datos del grafo..."):
@@ -595,27 +598,13 @@ if not st.session_state.grafo_cargado:
             st.error(f"Error al cargar datos: {mensaje}")
 
 # ============================================
-# 2. CABECERA EN 2 COLUMNAS
+# 2. TÍTULO Y CONTROLES SIMPLES
 # ============================================
-col_titulo, col_instrucciones = st.columns([2, 1])
+# Título principal
+st.markdown("# Mapa Interactivo de la Festividad del Señor de Qoyllur Rit'i")
 
-with col_titulo:
-    # Título principal
-    st.markdown("# Mapa Interactivo de la Festividad del Señor de Qoyllur Rit'i")
-    
-    # Subtítulo
-    st.markdown("Exploración interactiva de lugares rituales basada en información registrada durante 2025. La información es parcial y está en proceso de verificación.")
-
-with col_instrucciones:
-    # Instrucciones en una tarjeta
-    with st.container():
-        st.markdown("### Cómo usar el mapa")
-        st.markdown("""
-        - **Haga click** en cualquier marcador para ver información detallada
-        - **Use el control de capas** para cambiar el estilo del mapa
-        - **Ajuste el zoom** con los controles o la rueda del mouse
-        - **Filtre por tipo** usando el panel lateral
-        """)
+# Subtítulo
+st.markdown("Exploración interactiva de lugares rituales basada en información registrada durante 2025-2026. La información es parcial y está en proceso de verificación.")
 
 st.divider()
 
@@ -649,7 +638,7 @@ with col_centrar:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ============================================
-# 4. MAPA PRINCIPAL - GRANDE
+# 4. MAPA PRINCIPAL
 # ============================================
 if st.session_state.grafo_cargado:
     try:
@@ -663,7 +652,7 @@ if st.session_state.grafo_cargado:
             estilo_mapa
         )
         
-        # Mostrar mapa EN GRANDE
+        # Mostrar mapa
         mapa_data = st_folium(
             mapa,
             width=None,
@@ -749,7 +738,7 @@ else:
     st.warning("Cargando datos del grafo... por favor espere.")
 
 # ============================================
-# 6. INFORMACIÓN DEL PROYECTO (DEBAJO DEL MAPA)
+# 6. INFORMACIÓN DEL PROYECTO
 # ============================================
 st.divider()
 st.markdown("### Información del Proyecto de Investigación")
@@ -757,36 +746,15 @@ st.markdown("### Información del Proyecto de Investigación")
 col_proyecto1, col_proyecto2 = st.columns([1, 2])
 
 with col_proyecto1:
-    st.markdown("#### Responsable del Proyecto")
+    st.markdown("#### Proyecto")
     st.markdown("""
-    **Javier Vera Zúñiga**
     
-    *Investigador Principal*
+    *Grafos de conocimiento para la documentación de festividades andinas: 
+    Señor de Qoyllur Rit'i y Virgen del Carmen de Paucartambo*
     
-    Proyecto: *"Grafos de conocimiento para la documentación de festividades andinas: 
-    Señor de Qoyllur Rit'i y Virgen del Carmen de Paucartambo"*
-    
-    Universidad Tecnológica del Perú (UTP)
     """)
     
-
 with col_proyecto2:
-    st.markdown("#### Equipo de Investigación")
-    
-    col_equipo1, col_equipo2 = st.columns(2)
-    
-    with col_equipo1:
-        st.markdown("**🏔️ Paucartambo (Cusco)**")
-        st.markdown("""
-        -
-        """)
-    
-    with col_equipo2:
-        st.markdown("**🏛️ Lima**")
-        st.markdown("""
-        - 
-        """)
-    
     st.markdown("#### Objetivo Principal")
     st.markdown("""
     *Desarrollar una infraestructura basada en grafos de conocimiento para organizar y recuperar 
@@ -795,20 +763,31 @@ with col_proyecto2:
     """)
 
 # Nota metodológica
-st.markdown("---")
+st.markdown("#### Descripción técnica")
 st.markdown("""
-*Este mapa interactivo forma parte del sistema de visualización del proyecto de investigación, 
-mostrando los lugares rituales documentados en el grafo de conocimiento. La información presentada 
-se basa en datos recopilados durante 2025-2026 mediante trabajo de campo, entrevistas estructuradas 
-y documentación institucional, siguiendo protocolos éticos de consentimiento informado y 
-confidencialidad.*
+
+*Este mapa interactivo utiliza datos de un **grafo de conocimiento RDF/Turtle** que implementa una ontología específica para festividades andinas. 
+El modelo define clases como `Festividad`, `Lugar`, `EventoRitual` y `RecursoMedial`, utilizando propiedades como `SeCelebraEn` e `estaEnLugar` para 
+estructurar la información. Los datos actuales representan entidades concretas (individuos) como `Paucartambo` o `Sinakara`, anotadas con metadatos 
+como `descripcionBreve` y `nivelEmbeddings` para su posterior uso en sistemas de recuperación de información. El grafo sigue convenciones de modelado
+ estrictas para diferenciar eventos, tiempos y recursos, priorizando la claridad semántica sobre la complejidad técnica innecesaria.*
 """)
 
 # ============================================
-# 7. SIDEBAR CON INFORMACIÓN ADICIONAL
+# 7. SIDEBAR CON IMAGEN LIGERA
 # ============================================
 with st.sidebar:
-    st.header("Información del dataset")
+    # Imagen simple en el sidebar
+    st.markdown(f"""
+    <div style="text-align: center; margin-bottom: 15px;">
+        <img src="{IMAGEN_MONTAÑA_URL}" style="width: 100%; border-radius: 8px;">
+        <p style="font-size: 12px; color: #666; margin-top: 5px; font-style: italic;">
+            Fotografía de la Festividad del Señor de Qoyllur Rit'i (2025)
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.header("📊 Información del dataset")
     
     if st.session_state.grafo_cargado:
         total_lugares = len(st.session_state.lugares_data)
@@ -822,7 +801,7 @@ with st.sidebar:
     
     st.divider()
     
-    st.subheader("Tipos de lugares")
+    st.subheader("🎯 Tipos de lugares")
     
     tipos_lugares = [
         {"icono": "🏘️", "tipo": "Localidad", "descripcion": "Poblados y comunidades"},
@@ -850,7 +829,7 @@ with st.sidebar:
     
     st.divider()
     
-    st.subheader("Niveles de importancia")
+    st.subheader("ℹ️ Niveles de importancia")
     st.markdown("""
     **A**: Entidades centrales  
     **B**: Contextuales  
@@ -858,3 +837,6 @@ with st.sidebar:
     
     *Basado en el estándar del grafo TTL*
     """)
+
+# ============================================
+# 
