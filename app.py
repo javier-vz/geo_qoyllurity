@@ -661,7 +661,7 @@ with col_estilo:
 
 with col_zoom:
     # Cambié el zoom inicial de 10 a 8 para mostrar más área
-    zoom_level = st.slider("**Nivel de zoom**", 6, 15, 8)
+    zoom_level = st.slider("**Nivel de zoom**", 6, 15, 6)
 
 with col_lat:
     centro_lat = st.number_input("**Latitud**", value=-13.53, format="%.4f", key="lat_input")
