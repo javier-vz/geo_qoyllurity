@@ -38,8 +38,15 @@ if 'grafo_cargado' not in st.session_state:
     st.session_state.mapa_cargado = False
     st.session_state.filtro_tipo = "Todos"
     st.session_state.lugares_filtrados = []
-    st.session_state.tipos_seleccionados = []  # Tipos seleccionados
-    st.session_state.todos_tipos = []  # Todos los tipos disponibles
+    # INICIALIZAR LOS NUEVOS ATRIBUTOS
+    st.session_state.tipos_seleccionados = []  
+    st.session_state.todos_tipos = []
+
+# Asegurarnos de que los atributos existan incluso si ya se cargó el grafo
+if 'tipos_seleccionados' not in st.session_state:
+    st.session_state.tipos_seleccionados = []
+if 'todos_tipos' not in st.session_state:
+    st.session_state.todos_tipos = []
 
 # Namespaces
 EX = Namespace("http://example.org/festividades#")
@@ -670,13 +677,21 @@ if not st.session_state.grafo_cargado:
             st.session_state.lugares_data = lugares
             st.session_state.grafo = grafo
             
-            # Inicializar tipos
+            # AQUÍ ES DONDE SE INICIALIZAN LOS TIPOS
             todos_tipos = sorted(list(set([l['tipo_general'] for l in lugares])))
             st.session_state.todos_tipos = todos_tipos
             st.session_state.tipos_seleccionados = todos_tipos  # Todos seleccionados por defecto
             
         else:
             st.error(f"Error al cargar datos: {mensaje}")
+
+# Asegurarnos de que los tipos estén inicializados incluso si ya se cargó el grafo
+if st.session_state.grafo_cargado and not st.session_state.todos_tipos:
+    lugares = st.session_state.lugares_data
+    todos_tipos = sorted(list(set([l['tipo_general'] for l in lugares])))
+    st.session_state.todos_tipos = todos_tipos
+    if not st.session_state.tipos_seleccionados:
+        st.session_state.tipos_seleccionados = todos_tipos
 
 # ============================================
 # 2. TÍTULO Y CONTROLES SIMPLES
@@ -879,7 +894,7 @@ como `descripcionBreve` y `nivelEmbeddings` para su posterior uso en sistemas de
 """)
 
 # ============================================
-# 7. SIDEBAR CON FILTROS MEJORADOS (SELECTBOX MULTIPLE)
+# 7. SIDEBAR CON FILTROS MEJORADOS
 # ============================================
 with st.sidebar:
     # Imagen
@@ -909,7 +924,19 @@ with st.sidebar:
     st.subheader("🎯 Filtros de lugares")
     
     if st.session_state.grafo_cargado:
-        todos_tipos = st.session_state.todos_tipos
+        # Verificar y obtener tipos
+        if not hasattr(st.session_state, 'todos_tipos') or not st.session_state.todos_tipos:
+            if st.session_state.lugares_data:
+                todos_tipos = sorted(list(set([l['tipo_general'] for l in st.session_state.lugares_data])))
+                st.session_state.todos_tipos = todos_tipos
+            else:
+                todos_tipos = []
+        else:
+            todos_tipos = st.session_state.todos_tipos
+        
+        # Verificar tipos seleccionados
+        if not hasattr(st.session_state, 'tipos_seleccionados'):
+            st.session_state.tipos_seleccionados = todos_tipos.copy()
         
         # Iconos para cada tipo
         iconos_tipos = {
@@ -921,66 +948,79 @@ with st.sidebar:
             'Lugar': '📍'
         }
         
-        # Crear opciones con iconos
-        opciones_con_iconos = [f"{iconos_tipos.get(tipo, '📍')} {tipo}" for tipo in todos_tipos]
-        
-        # USAR SELECTBOX MULTIPLE (MÁS ESTABLE)
-        seleccionados_con_iconos = st.multiselect(
-            "**Seleccionar tipos a mostrar:**",
-            options=opciones_con_iconos,
-            default=opciones_con_iconos,  # Todos seleccionados por defecto
-            key="filtro_multiselect",  # KEY ÚNICO
-            help="Selecciona los tipos de lugares que quieres ver en el mapa"
-        )
-        
-        # Convertir de nuevo a tipos simples (sin iconos)
-        tipos_seleccionados = []
-        for seleccion in seleccionados_con_iconos:
-            for icono in ['🏘️ ', '⛪ ', '🏔️ ', '✝️ ', '🛣️ ', '📍 ']:
-                if seleccion.startswith(icono):
-                    tipos_seleccionados.append(seleccion.replace(icono, '', 1))
-                    break
-        
-        # Actualizar session state
-        st.session_state.tipos_seleccionados = tipos_seleccionados
-        
-        # BOTONES DE CONTROL
-        st.markdown("---")
-        col_btn1, col_btn2 = st.columns(2)
-        
-        with col_btn1:
-            if st.button("✅ **Todos**", use_container_width=True, type="secondary"):
-                st.session_state.tipos_seleccionados = todos_tipos
-                st.rerun()
-        
-        with col_btn2:
-            if st.button("❌ **Ninguno**", use_container_width=True, type="secondary"):
-                st.session_state.tipos_seleccionados = []
-                st.rerun()
-        
-        # Mostrar estadísticas del filtro actual
-        st.markdown("---")
-        if tipos_seleccionados:
-            total_filtrado = len([l for l in st.session_state.lugares_data 
-                                if l['tipo_general'] in tipos_seleccionados])
+        if todos_tipos:
+            # Crear opciones con iconos
+            opciones_con_iconos = [f"{iconos_tipos.get(tipo, '📍')} {tipo}" for tipo in todos_tipos]
             
-            if len(tipos_seleccionados) == len(todos_tipos):
-                st.success(f"✅ **Mostrando todos**")
-                st.caption(f"{total_filtrado} lugares visibles")
+            # Determinar valores por defecto para el multiselect
+            if st.session_state.tipos_seleccionados:
+                # Convertir tipos seleccionados a formato con iconos
+                default_seleccionados = []
+                for tipo in st.session_state.tipos_seleccionados:
+                    icono = iconos_tipos.get(tipo, '📍')
+                    default_seleccionados.append(f"{icono} {tipo}")
             else:
-                st.info(f"📍 **Filtro activo**")
-                st.caption(f"{total_filtrado} de {total_lugares} lugares")
-                st.caption(f"{len(tipos_seleccionados)} de {len(todos_tipos)} tipos seleccionados")
+                default_seleccionados = opciones_con_iconos  # Todos por defecto
+            
+            # USAR SELECTBOX MULTIPLE
+            seleccionados_con_iconos = st.multiselect(
+                "**Seleccionar tipos a mostrar:**",
+                options=opciones_con_iconos,
+                default=default_seleccionados,
+                key="filtro_multiselect",
+                help="Selecciona los tipos de lugares que quieres ver en el mapa"
+            )
+            
+            # Convertir de nuevo a tipos simples (sin iconos)
+            tipos_seleccionados = []
+            for seleccion in seleccionados_con_iconos:
+                for icono in ['🏘️ ', '⛪ ', '🏔️ ', '✝️ ', '🛣️ ', '📍 ']:
+                    if seleccion.startswith(icono):
+                        tipos_seleccionados.append(seleccion.replace(icono, '', 1))
+                        break
+            
+            # Actualizar session state
+            st.session_state.tipos_seleccionados = tipos_seleccionados
+            
+            # BOTONES DE CONTROL
+            st.markdown("---")
+            col_btn1, col_btn2 = st.columns(2)
+            
+            with col_btn1:
+                if st.button("✅ **Todos**", use_container_width=True, type="secondary"):
+                    st.session_state.tipos_seleccionados = todos_tipos.copy()
+                    st.rerun()
+            
+            with col_btn2:
+                if st.button("❌ **Ninguno**", use_container_width=True, type="secondary"):
+                    st.session_state.tipos_seleccionados = []
+                    st.rerun()
+            
+            # Mostrar estadísticas del filtro actual
+            st.markdown("---")
+            if tipos_seleccionados:
+                total_filtrado = len([l for l in st.session_state.lugares_data 
+                                    if l['tipo_general'] in tipos_seleccionados])
+                
+                if len(tipos_seleccionados) == len(todos_tipos):
+                    st.success(f"✅ **Mostrando todos**")
+                    st.caption(f"{total_filtrado} lugares visibles")
+                else:
+                    st.info(f"📍 **Filtro activo**")
+                    st.caption(f"{total_filtrado} de {total_lugares} lugares")
+                    st.caption(f"{len(tipos_seleccionados)} de {len(todos_tipos)} tipos seleccionados")
+            else:
+                st.warning("⚠️ **Sin selección**")
+                st.caption("Selecciona al menos un tipo para ver lugares")
         else:
-            st.warning("⚠️ **Sin selección**")
-            st.caption("Selecciona al menos un tipo para ver lugares")
+            st.warning("No hay tipos de lugares disponibles")
     
     st.divider()
     
     # Estadísticas por tipo
     st.subheader("🗺️ Tipos disponibles")
     
-    if st.session_state.grafo_cargado:
+    if st.session_state.grafo_cargado and st.session_state.lugares_data:
         # Contar lugares por tipo
         conteo_por_tipo = {}
         for lugar in st.session_state.lugares_data:
