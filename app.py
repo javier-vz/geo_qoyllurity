@@ -953,7 +953,7 @@ with st.sidebar:
             opciones_con_iconos = [f"{iconos_tipos.get(tipo, '📍')} {tipo}" for tipo in todos_tipos]
             
             # ============================================
-            # SOLUCIÓN: USAR FORMULARIO PARA ACTUALIZACIÓN AUTOMÁTICA
+            # SOLUCIÓN: USAR FORMULARIO CON CSS PARA TEXTO PEQUEÑO
             # ============================================
             with st.form(key='filtro_form'):
                 # Determinar valores por defecto
@@ -972,24 +972,24 @@ with st.sidebar:
                 )
                 
                 # ============================================
-                # BOTONES CON TEXTO MÁS PEQUEÑO
+                # BOTONES CON TEXTO MÁS PEQUEÑO (SOLO TEXTO, NO BOTONES)
                 # ============================================
                 
-                # CSS para reducir tamaño de fuente en botones
+                # CSS para hacer el texto más pequeño dentro de los botones
                 st.markdown("""
                 <style>
-                    /* Reducir tamaño específicamente en estos botones del formulario */
-                    div[data-testid="stForm"] div.stButton > button {
+                    /* Solo reducir el tamaño del texto dentro de los botones */
+                    div[data-testid="stForm"] div.stButton > button > div > p {
                         font-size: 11px !important;
-                        padding: 0.15rem 0.3rem !important;
-                        height: 32px !important;
-                        margin: 0.1rem !important;
+                        font-weight: 500 !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
                     }
                     
-                    /* Asegurar que el texto quepa */
+                    /* Otra forma: seleccionar el span dentro del botón */
                     div[data-testid="stForm"] div.stButton > button span {
-                        font-size: 12px !important;
-                        line-height: 1.2 !important;
+                        font-size: 11px !important;
+                        font-weight: 500 !important;
                     }
                 </style>
                 """, unsafe_allow_html=True)
@@ -997,18 +997,18 @@ with st.sidebar:
                 col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
                 
                 with col_btn1:
-                    aplicar = st.form_submit_button("APLICAR", 
+                    aplicar = st.form_submit_button("Aplicar", 
                                                    use_container_width=True,
                                                    help="Aplicar filtros seleccionados")
                 
                 with col_btn2:
-                    todos = st.form_submit_button("TODOS", 
+                    todos = st.form_submit_button("Todos", 
                                                  use_container_width=True, 
                                                  type="secondary",
                                                  help="Seleccionar todos los tipos")
                 
                 with col_btn3:
-                    ninguno = st.form_submit_button("NINGUNO", 
+                    ninguno = st.form_submit_button("Ninguno", 
                                                    use_container_width=True, 
                                                    type="secondary",
                                                    help="Deseleccionar todos los tipos")
