@@ -574,7 +574,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     return mapa
 
 # -------------------------------------------------------------------
-# INTERFAZ STREAMLIT REORGANIZADA - MAPA DOMINANTE
+# INTERFAZ STREAMLIT REORGANIZADA - 2 COLUMNAS SUPERIORES
 # -------------------------------------------------------------------
 
 # ============================================
@@ -595,77 +595,61 @@ if not st.session_state.grafo_cargado:
             st.error(f"Error al cargar datos: {mensaje}")
 
 # ============================================
-# 2. LAYOUT PRINCIPAL - MAPA ARRIBA, CONTROLES LATERALES
+# 2. CABECERA EN 2 COLUMNAS
 # ============================================
+col_titulo, col_instrucciones = st.columns([2, 1])
 
-# Título principal (más pequeño)
-st.markdown("<h1 style='text-align: center; font-size: 24px;'>Mapa Interactivo del Señor de Qoyllur Rit'i</h1>", unsafe_allow_html=True)
+with col_titulo:
+    # Título principal
+    st.markdown("# Mapa Interactivo del Señor de Qoyllur Rit'i")
+    
+    # Subtítulo
+    st.markdown("Exploración interactiva de lugares rituales basada en información registrada durante 2025. La información es parcial y está en proceso de verificación.")
 
-# Breve descripción
-st.caption("Exploración interactiva de lugares rituales basada en información registrada durante 2025. La información es parcial y está en proceso de verificación.")
+with col_instrucciones:
+    # Instrucciones en una tarjeta
+    with st.container():
+        st.markdown("### 📋 Cómo usar el mapa")
+        st.markdown("""
+        - **📍 Haga click** en cualquier marcador para ver información detallada
+        - **🗺️ Use el control de capas** para cambiar el estilo del mapa
+        - **🔍 Ajuste el zoom** con los controles o la rueda del mouse
+        - **🎯 Filtre por tipo** usando el panel lateral
+        """)
 
-# Divider sutil
 st.divider()
 
 # ============================================
-# 3. CONTROLES PRINCIPALES EN 2 COLUMNAS ARRIBA
+# 3. CONTROLES DEL MAPA COMPACTOS
 # ============================================
-col_controles1, col_controles2 = st.columns([2, 1])
+col_estilo, col_zoom, col_lat, col_lon, col_centrar = st.columns([2, 2, 2, 2, 1])
 
-with col_controles1:
-    # Controles de mapa en 4 columnas compactas
-    col_estilo, col_zoom, col_lat, col_lon = st.columns(4)
-    
-    with col_estilo:
-        estilo_mapa = st.selectbox(
-            "**Estilo del mapa**",
-            ["Relieve", "Topográfico", "Mapa básico", "Blanco y negro", "Claro"],
-            index=0,
-            help="Selecciona el estilo visual del mapa"
-        )
-    
-    with col_zoom:
-        zoom_level = st.slider("**Nivel de zoom**", 8, 15, 10, help="Ajusta el nivel de zoom del mapa")
-    
-    with col_lat:
-        centro_lat = st.number_input("**Latitud**", value=-13.53, format="%.4f", key="lat_input")
-    
-    with col_lon:
-        centro_lon = st.number_input("**Longitud**", value=-71.97, format="%.4f", key="lon_input")
+with col_estilo:
+    estilo_mapa = st.selectbox(
+        "**Estilo del mapa**",
+        ["Relieve", "Topográfico", "Mapa básico", "Blanco y negro", "Claro"],
+        index=0
+    )
 
-with col_controles2:
-    # Botón de centrado
-    if st.button("🔄 **Centrar mapa**", use_container_width=True, type="secondary"):
+with col_zoom:
+    zoom_level = st.slider("**Nivel de zoom**", 8, 15, 10)
+
+with col_lat:
+    centro_lat = st.number_input("**Latitud**", value=-13.53, format="%.4f", key="lat_input")
+
+with col_lon:
+    centro_lon = st.number_input("**Longitud**", value=-71.97, format="%.4f", key="lon_input")
+
+with col_centrar:
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("🔄 **Centrar**", use_container_width=True, type="secondary"):
         st.session_state.mapa_cargado = True
         st.rerun()
 
-# Instrucciones compactas en expander
-with st.expander("📋 **Cómo usar el mapa**", expanded=False):
-    col_inst1, col_inst2, col_inst3 = st.columns(3)
-    with col_inst1:
-        st.markdown("""
-        **📍 Haga click en cualquier marcador**
-        
-        Para ver información detallada sobre el lugar
-        """)
-    with col_inst2:
-        st.markdown("""
-        **🗺️ Use el control de capas**
-        
-        Para cambiar el estilo del mapa
-        """)
-    with col_inst3:
-        st.markdown("""
-        **🔍 Ajuste el zoom**
-        
-        Con los controles o la rueda del mouse
-        """)
-
-# Espacio antes del mapa
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ============================================
-# 4. MAPA PRINCIPAL - GRANDE Y DOMINANTE
+# 4. MAPA PRINCIPAL - GRANDE
 # ============================================
 if st.session_state.grafo_cargado:
     try:
@@ -679,11 +663,11 @@ if st.session_state.grafo_cargado:
             estilo_mapa
         )
         
-        # Mostrar mapa EN GRANDE - usando todo el ancho disponible
+        # Mostrar mapa EN GRANDE
         mapa_data = st_folium(
             mapa,
-            width=None,  # Usar ancho completo
-            height=600,  # Altura fija suficiente
+            width=None,
+            height=600,
             returned_objects=["last_clicked", "last_object_clicked"]
         )
         
@@ -724,10 +708,10 @@ if st.session_state.grafo_cargado:
                         if lugar['ubicado_en']:
                             st.markdown(f"**Ubicado en:** {lugar['ubicado_en']}")
                     
-                    # Coordenadas en una línea
+                    # Coordenadas
                     st.markdown(f"**Coordenadas:** `{lugar['lat']:.6f}, {lugar['lon']:.6f}`")
                     
-                    # Relaciones en expansores compactos
+                    # Relaciones
                     if relaciones['eventos']:
                         with st.expander(f"📅 Eventos asociados ({len(relaciones['eventos'])})"):
                             for evento in relaciones['eventos']:
@@ -744,7 +728,6 @@ if st.session_state.grafo_cargado:
                     # Múltiples lugares
                     st.write(f"**Múltiples lugares ({len(lugares_en_punto)}) en esta ubicación**")
                     
-                    # Selector compacto
                     opciones = [f"{l['nombre']} ({l['tipo_general']})" for l in lugares_en_punto]
                     seleccion = st.selectbox("Seleccionar lugar:", opciones, key="selector_lugar")
                     
@@ -766,7 +749,45 @@ else:
     st.warning("Cargando datos del grafo... por favor espere.")
 
 # ============================================
-# 6. SIDEBAR CON INFORMACIÓN ADICIONAL
+# 6. INFORMACIÓN DEL PROYECTO (DEBAJO DEL MAPA)
+# ============================================
+st.divider()
+st.markdown("### 📋 Información del Proyecto")
+
+col_proyecto1, col_proyecto2, col_proyecto3 = st.columns(3)
+
+with col_proyecto1:
+    st.markdown("**Responsable del Proyecto**")
+    st.markdown("""
+    **Javier Vera Zúñiga**
+    
+    Investigador principal y desarrollador
+    """)
+
+with col_proyecto2:
+    st.markdown("**Colaboradores en Paucartambo**")
+    st.markdown("""
+    - Comunidades locales
+    - Guías rituales
+    - Autoridades tradicionales
+    - Registradores de campo
+    """)
+
+with col_proyecto3:
+    st.markdown("**Colaboradores en Lima**")
+    st.markdown("""
+    - Equipo de investigación
+    - Especialistas en datos
+    - Asesores académicos
+    - Desarrolladores
+    """)
+
+# Nota adicional
+st.markdown("---")
+st.markdown("*Este proyecto forma parte de una investigación sobre la festividad del Señor de Qoyllur Rit'i, integrando métodos etnográficos con tecnologías de conocimiento semántico para la preservación del patrimonio cultural andino.*")
+
+# ============================================
+# 7. SIDEBAR CON INFORMACIÓN ADICIONAL
 # ============================================
 with st.sidebar:
     st.header("📊 Información del dataset")
@@ -821,7 +842,7 @@ with st.sidebar:
     """)
 
 # ============================================
-# 7. PIE DE PÁGINA DISCRETO
+# 8. PIE DE PÁGINA DISCRETO
 # ============================================
 st.markdown("<br><br>", unsafe_allow_html=True)
 st.divider()
