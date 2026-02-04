@@ -43,7 +43,6 @@ RDF = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
 def obtener_relaciones_lugar(grafo, uri_lugar):
     """Obtiene relaciones para un lugar - VERSIÓN CON AGRUPACIÓN"""
     
-    # Extraer nombre del lugar de la URI para debug
     nombre_lugar = uri_lugar.split('#')[-1] if '#' in uri_lugar else uri_lugar.split('/')[-1]
     
     relaciones = {
@@ -55,7 +54,7 @@ def obtener_relaciones_lugar(grafo, uri_lugar):
         'naciones': []
     }
     
-    # 1. Eventos que ocurren en ESTE lugar específico (por URI exacta)
+    # 1. Eventos que ocurren en ESTE lugar específico
     query_eventos = f"""
     PREFIX : <http://example.org/festividades#>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -119,7 +118,6 @@ def obtener_relaciones_lugar(grafo, uri_lugar):
     try:
         for row in grafo.query(query_recursos):
             codigo = str(row.codigo)
-            # Determinar tipo basado en el código
             if "-FOTO-" in codigo: tipo_recurso = "Foto"
             elif "-VID-" in codigo: tipo_recurso = "Video"
             elif "-AUD-" in codigo: tipo_recurso = "Audio"
@@ -137,9 +135,8 @@ def obtener_relaciones_lugar(grafo, uri_lugar):
     return relaciones
 
 def crear_popup_html(lugar, relaciones):
-    """Crea HTML enriquecido para el popup con relaciones - VERSIÓN SIMPLIFICADA"""
+    """Crea HTML enriquecido para el popup con relaciones"""
     
-    # Escapar caracteres HTML
     nombre = html.escape(lugar['nombre'])
     descripcion = html.escape(lugar['descripcion'])
     
@@ -154,7 +151,6 @@ def crear_popup_html(lugar, relaciones):
     }
     color = colores_tipo.get(lugar['tipo_general'], '#95a5a6')
     
-    # HTML simplificado
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -164,7 +160,7 @@ def crear_popup_html(lugar, relaciones):
             body {{
                 margin: 0;
                 padding: 0;
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                font-family: 'Segoe UI', Tahoma, Geneva, sans-serif;
                 font-size: 14px;
                 color: #333;
                 line-height: 1.4;
@@ -367,7 +363,6 @@ def extraer_lugares(grafo):
 def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-71.97, zoom=10, estilo_mapa="Relieve"):
     """Crea un mapa Folium con múltiples estilos de mapa"""
     
-    # Filtrar lugares con coordenadas
     lugares_con_coords = [l for l in lugares_data if l['lat'] and l['lon']]
     
     if not lugares_con_coords:
@@ -382,7 +377,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
         tiles = "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
         attr = "OpenTopoMap"
         name = "Mapa topográfico"
-    else:  # OpenStreetMap por defecto
+    else:
         tiles = "OpenStreetMap"
         attr = "OpenStreetMap"
         name = "OpenStreetMap"
@@ -430,7 +425,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
         control=True
     ).add_to(mapa)
     
-    # Configurar iconos (más profesionales)
+    # Configurar iconos
     icon_configs = {
         'Localidad': {'color': 'blue', 'icon': 'home'},
         'Santuario': {'color': 'red', 'icon': 'star'},
@@ -480,7 +475,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             ).add_to(mapa)
             
         else:
-            # Múltiples lugares - crear popup especial simplificado
+            # Múltiples lugares - crear popup especial
             popup_html = f"""
             <!DOCTYPE html>
             <html>
@@ -549,7 +544,6 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
                 </div>
                 """
             
-            # Cerrar HTML
             popup_html += """
                     </div>
                 </div>
@@ -557,14 +551,12 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             </html>
             """
             
-            # Crear iframe para el popup del grupo
             iframe_grupo = folium.IFrame(
                 html=popup_html,
                 width=400,
                 height=450
             )
             
-            # Crear marcador para el grupo
             folium.Marker(
                 location=[lat, lon],
                 popup=folium.Popup(iframe_grupo, max_width=400),
@@ -582,7 +574,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     return mapa
 
 # -------------------------------------------------------------------
-# INTERFAZ STREAMLIT MEJORADA
+# INTERFAZ STREAMLIT MEJORADA - 2 COLUMNAS
 # -------------------------------------------------------------------
 
 # Título principal
@@ -603,72 +595,74 @@ if not st.session_state.grafo_cargado:
             st.session_state.lugares_data = lugares
             st.session_state.grafo = grafo
             st.session_state.mapa_cargado = True
-            st.success("Datos cargados correctamente")
         else:
             st.error(f"Error al cargar datos: {mensaje}")
 
 # ============================================
-# 2. LAYOUT PRINCIPAL
+# 2. INSTRUCCIONES ARRIBA
 # ============================================
-if st.session_state.grafo_cargado:
-    # Crear layout de 3 columnas
-    col_config, col_mapa, col_info = st.columns([1.2, 2, 0.8])
-    
-    with col_config:
-        # ============================================
-        # 3. COLUMNA IZQUIERDA: CONFIGURACIÓN TÉCNICA
-        # ============================================
-        st.subheader("Configuración del mapa")
+with st.expander("📋 Cómo usar el mapa", expanded=False):
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown("""
+        **📍 Haga click en cualquier marcador**
         
-        # Selector de estilo de mapa
-        estilo_mapa = st.selectbox(
-            "Estilo del mapa",
-            ["Relieve", "Topográfico", "Mapa básico", "Blanco y negro", "Claro"],
-            index=0
-        )
+        Para ver información detallada sobre el lugar
+        """)
+    with col2:
+        st.markdown("""
+        **🗺️ Use el control de capas**
         
-        st.divider()
+        Para cambiar el estilo del mapa
+        """)
+    with col3:
+        st.markdown("""
+        **🔍 Ajuste el zoom**
         
-        # Información técnica
-        st.subheader("Información técnica")
-        
-        total_lugares = len(st.session_state.lugares_data)
-        lugares_con_coords = len([l for l in st.session_state.lugares_data if l['lat'] and l['lon']])
-        
-        st.write(f"**Total de lugares:** {total_lugares}")
-        st.write(f"**Con coordenadas:** {lugares_con_coords}")
-        
-        # Distribución por tipo
-        if st.session_state.lugares_data:
-            df_lugares = pd.DataFrame(st.session_state.lugares_data)
-            distribucion = df_lugares['tipo_general'].value_counts()
-            
-            st.write("**Distribución por tipo:**")
-            for tipo, cantidad in distribucion.items():
-                st.write(f"• {tipo}: {cantidad}")
-        
-        st.divider()
-        
-        # Controles del mapa
-        st.subheader("Controles")
-        zoom_level = st.slider("Nivel de zoom", 8, 15, 10)
-        
-        col_lat, col_lon = st.columns(2)
-        with col_lat:
-            centro_lat = st.number_input("Latitud", value=-13.53, format="%.4f")
-        with col_lon:
-            centro_lon = st.number_input("Longitud", value=-71.97, format="%.4f")
-        
-        if st.button("Centrar mapa", use_container_width=True):
-            st.session_state.mapa_cargado = True
-    
-    with col_mapa:
-        # ============================================
-        # 4. COLUMNA CENTRAL: MAPA INTERACTIVO
-        # ============================================
-        st.subheader("Mapa interactivo")
-        
-        # Crear y mostrar mapa
+        Con los controles o la rueda del mouse
+        """)
+
+# ============================================
+# 3. CONTROLES ARRIBA - VISIBLES
+# ============================================
+st.divider()
+st.subheader("Configuración del mapa")
+
+# Controles en 4 columnas
+col_estilo, col_zoom, col_lat, col_lon = st.columns(4)
+
+with col_estilo:
+    estilo_mapa = st.selectbox(
+        "Estilo del mapa",
+        ["Relieve", "Topográfico", "Mapa básico", "Blanco y negro", "Claro"],
+        index=0
+    )
+
+with col_zoom:
+    zoom_level = st.slider("Nivel de zoom", 8, 15, 10)
+
+with col_lat:
+    centro_lat = st.number_input("Latitud", value=-13.53, format="%.4f", key="lat_input")
+
+with col_lon:
+    centro_lon = st.number_input("Longitud", value=-71.97, format="%.4f", key="lon_input")
+
+# Botón centrar
+if st.button("🔄 Centrar mapa en esta ubicación", use_container_width=True):
+    st.session_state.mapa_cargado = True
+
+st.divider()
+
+# ============================================
+# 4. LAYOUT DE 2 COLUMNAS PRINCIPALES
+# ============================================
+col_mapa, col_info = st.columns([2, 1])
+
+with col_mapa:
+    # ============================================
+    # 5. MAPA GRANDE
+    # ============================================
+    if st.session_state.grafo_cargado:
         try:
             mapa = crear_mapa_interactivo(
                 st.session_state.grafo,
@@ -679,16 +673,16 @@ if st.session_state.grafo_cargado:
                 estilo_mapa
             )
             
-            # Mostrar mapa
+            # Mostrar mapa GRANDE
             mapa_data = st_folium(
                 mapa,
-                width=800,
-                height=600,
+                width=900,
+                height=650,
                 returned_objects=["last_clicked", "last_object_clicked"]
             )
             
             # ============================================
-            # 5. PANEL DE INFORMACIÓN DE CLICK
+            # 6. PANEL DE INFORMACIÓN DE CLICK
             # ============================================
             if mapa_data and mapa_data.get("last_object_clicked"):
                 clicked_lat = mapa_data["last_object_clicked"]["lat"]
@@ -705,19 +699,29 @@ if st.session_state.grafo_cargado:
                 
                 if lugares_en_punto:
                     st.divider()
-                    st.subheader("Información del lugar seleccionado")
+                    st.subheader("📍 Información del lugar seleccionado")
                     
                     if len(lugares_en_punto) == 1:
                         lugar = lugares_en_punto[0]
                         relaciones = obtener_relaciones_lugar(st.session_state.grafo, lugar['uri'])
                         
-                        st.write(f"**{lugar['nombre']}**")
-                        st.write(f"*{lugar['tipo_general']} - Nivel {lugar['nivel']}*")
-                        st.write(lugar['descripcion'])
+                        # Mostrar en columnas
+                        col_nombre, col_tipo = st.columns([2, 1])
+                        with col_nombre:
+                            st.markdown(f"### {lugar['nombre']}")
+                        with col_tipo:
+                            st.markdown(f"**{lugar['tipo_general']}**")
+                            st.caption(f"Nivel: {lugar['nivel']}")
                         
-                        st.write(f"**Coordenadas:** {lugar['lat']:.6f}, {lugar['lon']:.6f}")
-                        if lugar['ubicado_en']:
-                            st.write(f"**Ubicado en:** {lugar['ubicado_en']}")
+                        st.write(f"**Descripción:** {lugar['descripcion']}")
+                        
+                        col_coords, col_ubicacion = st.columns(2)
+                        with col_coords:
+                            st.write(f"**Coordenadas:**")
+                            st.code(f"{lugar['lat']:.6f}, {lugar['lon']:.6f}")
+                        with col_ubicacion:
+                            if lugar['ubicado_en']:
+                                st.write(f"**Ubicado en:** {lugar['ubicado_en']}")
                         
                         # Mostrar relaciones
                         if relaciones['eventos']:
@@ -737,54 +741,83 @@ if st.session_state.grafo_cargado:
                         
                         # Selector para elegir lugar
                         opciones = [f"{l['nombre']} ({l['tipo_general']})" for l in lugares_en_punto]
-                        seleccion = st.selectbox("Seleccionar lugar:", opciones)
+                        seleccion = st.selectbox("Seleccionar lugar para ver detalles:", opciones, key="selector_lugar")
                         
                         idx = opciones.index(seleccion)
                         lugar = lugares_en_punto[idx]
                         relaciones = obtener_relaciones_lugar(st.session_state.grafo, lugar['uri'])
                         
+                        st.write(f"**{lugar['nombre']}**")
+                        st.write(f"*{lugar['tipo_general']} - Nivel {lugar['nivel']}*")
                         st.write(f"**Descripción:** {lugar['descripcion']}")
+                        
+                        st.write(f"**Coordenadas:** {lugar['lat']:.6f}, {lugar['lon']:.6f}")
                         
         except Exception as e:
             st.error(f"Error al crear el mapa: {str(e)}")
+    else:
+        st.warning("Esperando datos del grafo...")
+
+with col_info:
+    # ============================================
+    # 7. COLUMNA DERECHA: LEYENDA Y ESTADÍSTICAS
+    # ============================================
+    st.subheader("📊 Información del conjunto de datos")
     
-    with col_info:
-        # ============================================
-        # 6. COLUMNA DERECHA: LEYENDA Y AYUDA
-        # ============================================
-        st.subheader("Leyenda")
+    if st.session_state.grafo_cargado:
+        total_lugares = len(st.session_state.lugares_data)
+        lugares_con_coords = len([l for l in st.session_state.lugares_data if l['lat'] and l['lon']])
         
-        st.write("**Tipos de lugares:**")
-        st.write("• **Localidad**: Poblados y comunidades")
-        st.write("• **Santuario**: Espacios sagrados principales")
-        st.write("• **Glaciar**: Áreas de hielo ritual")
-        st.write("• **Iglesia**: Templos y capillas")
-        st.write("• **Ruta**: Caminos rituales")
-        st.write("• **Lugar**: Otros espacios significativos")
+        st.metric("Total de lugares", total_lugares)
+        st.metric("Con coordenadas", lugares_con_coords)
         
         st.divider()
-        
-        st.write("**Niveles de importancia:**")
-        st.write("• **A**: Entidades centrales")
-        st.write("• **B**: Contextuales")
-        st.write("• **C**: Estructurales")
-        
-        st.divider()
-        
-        st.write("**Cómo usar el mapa:**")
-        st.write("1. Haga click en cualquier marcador")
-        st.write("2. Use el control de capas para cambiar el estilo")
-        st.write("3. Ajuste el zoom con los controles")
     
-    # ============================================
-    # 7. PIE DE PÁGINA
-    # ============================================
+    st.subheader("🎯 Tipos de lugares")
+    
+    # Tabla de tipos con iconos
+    tipos_lugares = [
+        {"icono": "🏘️", "tipo": "Localidad", "descripcion": "Poblados y comunidades"},
+        {"icono": "⛪", "tipo": "Santuario", "descripcion": "Espacios sagrados principales"},
+        {"icono": "🏔️", "tipo": "Glaciar", "descripcion": "Áreas de hielo ritual"},
+        {"icono": "✝️", "tipo": "Iglesia", "descripcion": "Templos y capillas"},
+        {"icono": "🛣️", "tipo": "Ruta", "descripcion": "Caminos rituales"},
+        {"icono": "📍", "tipo": "Lugar", "descripcion": "Otros espacios significativos"}
+    ]
+    
+    for tipo_info in tipos_lugares:
+        st.write(f"**{tipo_info['icono']} {tipo_info['tipo']}**")
+        st.caption(tipo_info['descripcion'])
+    
     st.divider()
-    st.caption("""
-    **Mapa Interactivo del Señor de Qoyllur Rit'i** | 
-    Datos extraídos del grafo de conocimiento TTL | 
-    Información registrada durante 2025 - En proceso de verificación
+    
+    st.subheader("📈 Distribución por tipo")
+    if st.session_state.grafo_cargado:
+        df_lugares = pd.DataFrame(st.session_state.lugares_data)
+        distribucion = df_lugares['tipo_general'].value_counts()
+        
+        # Mostrar como lista
+        for tipo, cantidad in distribucion.items():
+            porcentaje = (cantidad / total_lugares) * 100
+            st.write(f"• **{tipo}**: {cantidad} ({porcentaje:.1f}%)")
+    
+    st.divider()
+    
+    st.subheader("ℹ️ Niveles de importancia")
+    st.write("""
+    **A**: Entidades centrales  
+    **B**: Contextuales  
+    **C**: Estructurales
+    
+    *Información basada en el estándar del grafo TTL*
     """)
-else:
-    # Pantalla de error si no se cargan datos
-    st.error("No se pudieron cargar los datos del grafo. Por favor, verifique la conexión.")
+
+# ============================================
+# 8. PIE DE PÁGINA
+# ============================================
+st.divider()
+st.caption("""
+**Mapa Interactivo del Señor de Qoyllur Rit'i** | 
+Datos extraídos del grafo de conocimiento TTL | 
+Información registrada durante 2025 - En proceso de verificación
+""")
