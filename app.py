@@ -980,7 +980,7 @@ with st.sidebar:
                 <style>
                     /* Solo reducir el tamaño del texto dentro de los botones */
                     div[data-testid="stForm"] div.stButton > button > div > p {
-                        font-size: 11px !important;
+                        font-size: 9px !important;
                         font-weight: 500 !important;
                         margin: 0 !important;
                         padding: 0 !important;
