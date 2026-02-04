@@ -567,7 +567,7 @@ with st.sidebar:
     
     ttl_url = st.text_input(
         "URL del grafo TTL:",
-        value="https://raw.githubusercontent.com/javier-vz/kg-llm/blob/main/data/grafo.ttl"
+        value="https://raw.githubusercontent.com/javier-vz/kg-llm/main/data/grafo.ttl"
     )
     
     if st.button("📥 Cargar Datos", type="primary", use_container_width=True):
