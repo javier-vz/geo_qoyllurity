@@ -953,7 +953,7 @@ with st.sidebar:
             opciones_con_iconos = [f"{iconos_tipos.get(tipo, '📍')} {tipo}" for tipo in todos_tipos]
             
             # ============================================
-            # SOLUCIÓN: USAR FORMULARIO CON CSS PARA TEXTO PEQUEÑO
+            # SOLUCIÓN: USAR FORMULARIO
             # ============================================
             with st.form(key='filtro_form'):
                 # Determinar valores por defecto
@@ -972,24 +972,24 @@ with st.sidebar:
                 )
                 
                 # ============================================
-                # BOTONES CON TEXTO MÁS PEQUEÑO (SOLO TEXTO, NO BOTONES)
+                # BOTONES CON TEXTO QUE NO SE ROMPE
                 # ============================================
                 
-                # CSS para hacer el texto más pequeño dentro de los botones
+                # CSS para EVITAR que el texto se divida en dos líneas
                 st.markdown("""
                 <style>
-                    /* Solo reducir el tamaño del texto dentro de los botones */
-                    div[data-testid="stForm"] div.stButton > button > div > p {
-                        font-size: 9px !important;
-                        font-weight: 500 !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
+                    /* Evitar que el texto se rompa en dos líneas */
+                    div[data-testid="stForm"] button {
+                        white-space: nowrap !important;
+                        overflow: hidden !important;
+                        text-overflow: ellipsis !important;
                     }
                     
-                    /* Otra forma: seleccionar el span dentro del botón */
-                    div[data-testid="stForm"] div.stButton > button span {
+                    /* Texto más pequeño y centrado */
+                    div[data-testid="stForm"] button div p {
                         font-size: 11px !important;
-                        font-weight: 500 !important;
+                        white-space: nowrap !important;
+                        text-align: center !important;
                     }
                 </style>
                 """, unsafe_allow_html=True)
@@ -997,18 +997,18 @@ with st.sidebar:
                 col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
                 
                 with col_btn1:
-                    aplicar = st.form_submit_button("Aplicar", 
+                    aplicar = st.form_submit_button("Apl",  # 3 letras máximo
                                                    use_container_width=True,
                                                    help="Aplicar filtros seleccionados")
                 
                 with col_btn2:
-                    todos = st.form_submit_button("Todos", 
+                    todos = st.form_submit_button("Todo",  # 4 letras máximo
                                                  use_container_width=True, 
                                                  type="secondary",
                                                  help="Seleccionar todos los tipos")
                 
                 with col_btn3:
-                    ninguno = st.form_submit_button("Ninguno", 
+                    ninguno = st.form_submit_button("Ning",  # 4 letras máximo
                                                    use_container_width=True, 
                                                    type="secondary",
                                                    help="Deseleccionar todos los tipos")
@@ -1049,11 +1049,6 @@ with st.sidebar:
                     st.info(f"📍 **Filtro activo**")
                     st.caption(f"{total_filtrado} de {total_lugares} lugares")
                     st.caption(f"{len(tipos_actuales)} de {len(todos_tipos)} tipos seleccionados")
-                    
-                    # Mostrar tipos seleccionados
-                    if len(tipos_actuales) <= 4:
-                        tipos_texto = ", ".join(tipos_actuales)
-                        st.caption(f"Tipos: {tipos_texto}")
             else:
                 st.warning("⚠️ **Sin selección**")
                 st.caption("Selecciona al menos un tipo para ver lugares")
