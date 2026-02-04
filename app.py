@@ -746,7 +746,7 @@ st.markdown("### Información del Proyecto de Investigación")
 col_proyecto1, col_proyecto2 = st.columns([1, 2])
 
 with col_proyecto1:
-    st.markdown("#### 👤 Responsable del Proyecto (y de posibles errores)")
+    st.markdown("#### Responsable del Proyecto (y de posibles errores)")
     st.markdown("""
     **Javier Vera Zúñiga**
     
