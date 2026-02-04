@@ -25,14 +25,18 @@ st.set_page_config(
 # URL de la imagen
 IMAGEN_MONTAÑA_URL = "https://github.com/javier-vz/geo_qoyllurity/raw/main/imagenes/1750608881981.jpg"
 
-# Inicializar session state
+# ============================================
+# INICIALIZAR SESSION STATE (DEBE IR ANTES DE CUALQUIER OTRO CÓDIGO)
+# ============================================
+
+# Inicializar TODAS las variables de session state aquí
 if 'grafo_cargado' not in st.session_state:
     st.session_state.grafo_cargado = False
     st.session_state.lugares_data = []
     st.session_state.grafo = None
     st.session_state.last_clicked = None
     st.session_state.mapa_cargado = False
-    st.session_state.filtro_tipo = "Todos"
+    st.session_state.filtro_tipo = "Todos"  # <-- INICIALIZAR AQUÍ
     st.session_state.lugares_filtrados = []
 
 # Namespaces
@@ -627,6 +631,7 @@ if not st.session_state.grafo_cargado:
             st.session_state.lugares_data = lugares
             st.session_state.grafo = grafo
             st.session_state.mapa_cargado = True
+            # Inicializar también lugares_filtrados
             st.session_state.lugares_filtrados = lugares
         else:
             st.error(f"Error al cargar datos: {mensaje}")
@@ -847,29 +852,34 @@ with st.sidebar:
     
     st.subheader("🎯 Filtros de lugares")
     
-    # Opciones de filtro
-    opciones_filtro = ["Todos"] + list(set([l['tipo_general'] for l in st.session_state.lugares_data]))
+    # Opciones de filtro - asegurarnos de que tenemos los tipos únicos
+    tipos_unicos = list(set([l['tipo_general'] for l in st.session_state.lugares_data]))
+    tipos_unicos.sort()
+    opciones_filtro = ["Todos"] + tipos_unicos
     
     # Usar radio buttons para selección de filtro
+    # Verificar que el filtro actual esté en las opciones
+    filtro_actual = st.session_state.filtro_tipo
+    if filtro_actual not in opciones_filtro:
+        filtro_actual = "Todos"
+        st.session_state.filtro_tipo = "Todos"
+    
     filtro_seleccionado = st.radio(
         "Filtrar por tipo:",
         opciones_filtro,
-        index=opciones_filtro.index(st.session_state.filtro_tipo) if st.session_state.filtro_tipo in opciones_filtro else 0,
+        index=opciones_filtro.index(filtro_actual),
         key="filtro_tipo_selector"
     )
     
     # Actualizar el filtro si cambió
     if filtro_seleccionado != st.session_state.filtro_tipo:
         st.session_state.filtro_tipo = filtro_seleccionado
-        if filtro_seleccionado == "Todos":
-            st.session_state.lugares_filtrados = st.session_state.lugares_data
-        else:
-            st.session_state.lugares_filtrados = [l for l in st.session_state.lugares_data if l['tipo_general'] == filtro_seleccionado]
         st.rerun()
     
     # Mostrar conteo para el filtro actual
     if st.session_state.filtro_tipo != "Todos":
-        st.info(f"**Mostrando {len(st.session_state.lugares_filtrados)} lugares de tipo: {st.session_state.filtro_tipo}**")
+        lugares_filtrados = [l for l in st.session_state.lugares_data if l['tipo_general'] == st.session_state.filtro_tipo]
+        st.info(f"**Mostrando {len(lugares_filtrados)} lugares de tipo: {st.session_state.filtro_tipo}**")
     
     # Botón para limpiar filtro
     if st.session_state.filtro_tipo != "Todos":
@@ -898,11 +908,12 @@ with st.sidebar:
         {"icono": "📍", "tipo": "Lugar", "descripcion": "Otros espacios"}
     ]
     
+    # Mostrar solo los tipos que existen en los datos
     for tipo_info in tipos_lugares:
         tipo = tipo_info['tipo']
         conteo = tipos_conteo.get(tipo, 0)
         
-        # Crear un contenedor clickeable para cada tipo
+        # Solo mostrar tipos que existen
         if conteo > 0:
             col_tipo1, col_tipo2 = st.columns([1, 4])
             with col_tipo1:
