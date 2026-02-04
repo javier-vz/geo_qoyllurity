@@ -650,7 +650,7 @@ col_estilo, col_zoom, col_lat, col_lon, col_centrar = st.columns([2, 2, 2, 2, 1]
 with col_estilo:
     estilo_mapa = st.selectbox(
         "**Estilo del mapa**",
-        ["Relieve", "Topográfico", "Mapa básico", "Blanco y negro", "Claro"],
+        ["Relieve", "Topográfico", "Mapa básico", "Claro"],
         index=0
     )
 
