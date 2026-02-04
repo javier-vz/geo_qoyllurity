@@ -975,13 +975,13 @@ with st.sidebar:
                 col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
                 
                 with col_btn1:
-                    aplicar = st.form_submit_button("✅ **Aplicar**", use_container_width=True)
+                    aplicar = st.form_submit_button("✓\nAPLICAR", use_container_width=True)
                 
                 with col_btn2:
-                    todos = st.form_submit_button("Todos", use_container_width=True, type="secondary")
+                    todos = st.form_submit_button("✓✓\nTODOS", use_container_width=True, type="secondary")
                 
                 with col_btn3:
-                    ninguno = st.form_submit_button("Ninguno", use_container_width=True, type="secondary")
+                    ninguno = st.form_submit_button("✗\nNINGUNO", use_container_width=True, type="secondary")
             
             # Procesar la selección cuando se presiona el botón
             if aplicar or todos or ninguno:
