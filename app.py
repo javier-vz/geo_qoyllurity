@@ -971,17 +971,40 @@ with st.sidebar:
                     help="Selecciona los tipos de lugares que quieres ver en el mapa"
                 )
                 
-                # Botón para aplicar filtro
-                col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
-                
-                with col_btn1:
-                    aplicar = st.form_submit_button("✓\nAPLICAR", use_container_width=True)
-                
-                with col_btn2:
-                    todos = st.form_submit_button("✓✓\nTODOS", use_container_width=True, type="secondary")
-                
-                with col_btn3:
-                    ninguno = st.form_submit_button("✗\nNINGUNO", use_container_width=True, type="secondary")
+                # ============================================
+            # BOTONES CON TEXTO MÁS PEQUEÑO
+            # ============================================
+            
+            # CSS para reducir tamaño de fuente en botones
+            st.markdown("""
+            <style>
+                /* Reducir tamaño específicamente en estos botones del formulario */
+                div[data-testid="stForm"] div.stButton > button {
+                    font-size: 13px !important;
+                    padding: 0.15rem 0.3rem !important;
+                    height: 32px !important;
+                }
+            </style>
+            """, unsafe_allow_html=True)
+            
+            col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
+            
+            with col_btn1:
+                aplicar = st.form_submit_button("APLICAR", 
+                                               use_container_width=True,
+                                               help="Aplicar filtros seleccionados")
+            
+            with col_btn2:
+                todos = st.form_submit_button("TODOS", 
+                                             use_container_width=True, 
+                                             type="secondary",
+                                             help="Seleccionar todos los tipos")
+            
+            with col_btn3:
+                ninguno = st.form_submit_button("NINGUNO", 
+                                               use_container_width=True, 
+                                               type="secondary",
+                                               help="Deseleccionar todos los tipos")
             
             # Procesar la selección cuando se presiona el botón
             if aplicar or todos or ninguno:
