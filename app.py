@@ -601,7 +601,7 @@ col_titulo, col_instrucciones = st.columns([2, 1])
 
 with col_titulo:
     # Título principal
-    st.markdown("# Mapa Interactivo del Señor de Qoyllur Rit'i")
+    st.markdown("# Mapa Interactivo de la Festividad del Señor de Qoyllur Rit'i")
     
     # Subtítulo
     st.markdown("Exploración interactiva de lugares rituales basada en información registrada durante 2025. La información es parcial y está en proceso de verificación.")
@@ -609,12 +609,12 @@ with col_titulo:
 with col_instrucciones:
     # Instrucciones en una tarjeta
     with st.container():
-        st.markdown("### 📋 Cómo usar el mapa")
+        st.markdown("### Cómo usar el mapa")
         st.markdown("""
-        - **📍 Haga click** en cualquier marcador para ver información detallada
-        - **🗺️ Use el control de capas** para cambiar el estilo del mapa
-        - **🔍 Ajuste el zoom** con los controles o la rueda del mouse
-        - **🎯 Filtre por tipo** usando el panel lateral
+        - **Haga click** en cualquier marcador para ver información detallada
+        - **Use el control de capas** para cambiar el estilo del mapa
+        - **Ajuste el zoom** con los controles o la rueda del mouse
+        - **Filtre por tipo** usando el panel lateral
         """)
 
 st.divider()
@@ -752,7 +752,7 @@ else:
 # 6. INFORMACIÓN DEL PROYECTO (DEBAJO DEL MAPA)
 # ============================================
 st.divider()
-st.markdown("### 📋 Información del Proyecto")
+st.markdown("### Información del Proyecto")
 
 col_proyecto1, col_proyecto2, col_proyecto3 = st.columns(3)
 
@@ -790,7 +790,7 @@ st.markdown("*Este proyecto forma parte de una investigación sobre la festivida
 # 7. SIDEBAR CON INFORMACIÓN ADICIONAL
 # ============================================
 with st.sidebar:
-    st.header("📊 Información del dataset")
+    st.header("Información del dataset")
     
     if st.session_state.grafo_cargado:
         total_lugares = len(st.session_state.lugares_data)
@@ -804,7 +804,7 @@ with st.sidebar:
     
     st.divider()
     
-    st.subheader("🎯 Tipos de lugares")
+    st.subheader("Tipos de lugares")
     
     tipos_lugares = [
         {"icono": "🏘️", "tipo": "Localidad", "descripcion": "Poblados y comunidades"},
@@ -832,7 +832,7 @@ with st.sidebar:
     
     st.divider()
     
-    st.subheader("ℹ️ Niveles de importancia")
+    st.subheader("Niveles de importancia")
     st.markdown("""
     **A**: Entidades centrales  
     **B**: Contextuales  
