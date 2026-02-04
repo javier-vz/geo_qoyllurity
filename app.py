@@ -785,11 +785,12 @@ with col_proyecto2:
 # Nota metodológica
 st.markdown("---")
 st.markdown("""
-*Este mapa interactivo forma parte del sistema de visualización del proyecto de investigación, 
-mostrando los lugares rituales documentados en el grafo de conocimiento. La información presentada 
-se basa en datos recopilados durante 2025-2026 mediante trabajo de campo, entrevistas estructuradas 
-y documentación institucional, siguiendo protocolos éticos de consentimiento informado y 
-confidencialidad.*
+**Descripción técnica**
+Este mapa interactivo utiliza datos de un **grafo de conocimiento RDF/Turtle** que implementa una ontología específica para festividades andinas. 
+El modelo define clases como `Festividad`, `Lugar`, `EventoRitual` y `RecursoMedial`, utilizando propiedades como `SeCelebraEn` e `estaEnLugar` para 
+estructurar la información. Los datos actuales representan entidades concretas (individuos) como `Paucartambo` o `Sinakara`, anotadas con metadatos 
+como `descripcionBreve` y `nivelEmbeddings` para su posterior uso en sistemas de recuperación de información. El grafo sigue convenciones de modelado
+ estrictas para diferenciar eventos, tiempos y recursos, priorizando la claridad semántica sobre la complejidad técnica innecesaria.
 """)
 
 # ============================================
