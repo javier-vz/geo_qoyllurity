@@ -36,7 +36,7 @@ if 'grafo_cargado' not in st.session_state:
     st.session_state.grafo = None
     st.session_state.last_clicked = None
     st.session_state.mapa_cargado = False
-    st.session_state.filtro_tipo = "Todos"  # <-- INICIALIZAR AQUÍ
+    st.session_state.filtro_tipo = "Todos"
     st.session_state.lugares_filtrados = []
 
 # Namespaces
@@ -682,11 +682,34 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ============================================
 if st.session_state.grafo_cargado:
     try:
-        # Filtrar lugares si hay un filtro activo
-        if st.session_state.filtro_tipo and st.session_state.filtro_tipo != "Todos":
-            lugares_a_mostrar = [l for l in st.session_state.lugares_data if l['tipo_general'] == st.session_state.filtro_tipo]
+        # Usar los tipos seleccionados del sidebar
+        # Inicializar si no existe
+        if 'tipos_seleccionados_multi' not in st.session_state:
+            # Por defecto seleccionar todos los tipos
+            tipos_unicos = list(set([l['tipo_general'] for l in st.session_state.lugares_data]))
+            tipos_unicos.sort()
+            iconos_tipos = {
+                'Localidad': '🏘️', 'Santuario': '⛪', 'Glaciar': '🏔️',
+                'Iglesia': '✝️', 'Ruta': '🛣️', 'Lugar': '📍'
+            }
+            opciones_con_iconos = [f"{iconos_tipos.get(tipo, '📍')} {tipo}" for tipo in tipos_unicos]
+            st.session_state.tipos_seleccionados_multi = opciones_con_iconos.copy()
+        
+        # Convertir a tipos simples
+        tipos_simples = [tipo.replace("🏘️ ", "").replace("⛪ ", "").replace("🏔️ ", "").replace("✝️ ", "").replace("🛣️ ", "").replace("📍 ", "") 
+                        for tipo in st.session_state.tipos_seleccionados_multi]
+        
+        # Filtrar lugares según tipos seleccionados
+        if tipos_simples and len(tipos_simples) < len(set([l['tipo_general'] for l in st.session_state.lugares_data])):
+            # Mostrar solo los tipos seleccionados
+            lugares_a_mostrar = [
+                l for l in st.session_state.lugares_data 
+                if l['tipo_general'] in tipos_simples
+            ]
             lugares_destacados = lugares_a_mostrar
+            st.info(f"📍 **Filtro activo**: Mostrando {len(lugares_a_mostrar)} lugares")
         else:
+            # Mostrar todos los lugares
             lugares_a_mostrar = st.session_state.lugares_data
             lugares_destacados = None
         
@@ -709,6 +732,8 @@ if st.session_state.grafo_cargado:
             returned_objects=["last_clicked", "last_object_clicked"]
         )
         
+        # Resto del código...
+                
         # ============================================
         # 5. INFORMACIÓN DE CLICK (DEBAJO DEL MAPA)
         # ============================================
@@ -852,82 +877,78 @@ with st.sidebar:
     
     st.subheader("🎯 Filtros de lugares")
     
-    # Opciones de filtro - asegurarnos de que tenemos los tipos únicos
-    tipos_unicos = list(set([l['tipo_general'] for l in st.session_state.lugares_data]))
-    tipos_unicos.sort()
-    opciones_filtro = ["Todos"] + tipos_unicos
-    
-    # Usar radio buttons para selección de filtro
-    # Verificar que el filtro actual esté en las opciones
-    filtro_actual = st.session_state.filtro_tipo
-    if filtro_actual not in opciones_filtro:
-        filtro_actual = "Todos"
-        st.session_state.filtro_tipo = "Todos"
-    
-    filtro_seleccionado = st.radio(
-        "Filtrar por tipo:",
-        opciones_filtro,
-        index=opciones_filtro.index(filtro_actual),
-        key="filtro_tipo_selector"
-    )
-    
-    # Actualizar el filtro si cambió
-    if filtro_seleccionado != st.session_state.filtro_tipo:
-        st.session_state.filtro_tipo = filtro_seleccionado
-        st.rerun()
-    
-    # Mostrar conteo para el filtro actual
-    if st.session_state.filtro_tipo != "Todos":
-        lugares_filtrados = [l for l in st.session_state.lugares_data if l['tipo_general'] == st.session_state.filtro_tipo]
-        st.info(f"**Mostrando {len(lugares_filtrados)} lugares de tipo: {st.session_state.filtro_tipo}**")
-    
-    # Botón para limpiar filtro
-    if st.session_state.filtro_tipo != "Todos":
-        if st.button("🧹 Mostrar todos los lugares", use_container_width=True):
-            st.session_state.filtro_tipo = "Todos"
-            st.rerun()
+    # Obtener tipos únicos de lugares
+    if st.session_state.grafo_cargado:
+        tipos_unicos = list(set([l['tipo_general'] for l in st.session_state.lugares_data]))
+        tipos_unicos.sort()
+        
+        # Iconos para cada tipo
+        iconos_tipos = {
+            'Localidad': '🏘️',
+            'Santuario': '⛪',
+            'Glaciar': '🏔️',
+            'Iglesia': '✝️',
+            'Ruta': '🛣️',
+            'Lugar': '📍'
+        }
+        
+        # Crear opciones con iconos
+        opciones_con_iconos = [f"{iconos_tipos.get(tipo, '📍')} {tipo}" for tipo in tipos_unicos]
+        
+        # IMPORTANTE: Por defecto seleccionar TODOS
+        # Usamos un if para manejar la primera vez
+        if 'tipos_seleccionados_multi' not in st.session_state:
+            st.session_state.tipos_seleccionados_multi = opciones_con_iconos.copy()
+        
+        # Multiselect sin rerun automático
+        tipos_seleccionados = st.multiselect(
+            "**Seleccionar tipos a mostrar:**",
+            opciones_con_iconos,
+            default=st.session_state.tipos_seleccionados_multi,
+            help="Selecciona uno o varios tipos de lugares para filtrar. Por defecto todos están seleccionados."
+        )
+        
+        # Actualizar session_state solo si cambió
+        if tipos_seleccionados != st.session_state.tipos_seleccionados_multi:
+            st.session_state.tipos_seleccionados_multi = tipos_seleccionados
+        
+        # Convertir de nuevo a tipos simples (sin iconos)
+        tipos_simples = [tipo.replace("🏘️ ", "").replace("⛪ ", "").replace("🏔️ ", "").replace("✝️ ", "").replace("🛣️ ", "").replace("📍 ", "") for tipo in st.session_state.tipos_seleccionados_multi]
+        
+        # Mostrar contador
+        if tipos_simples:
+            # Si hay tipos seleccionados, mostrar solo esos
+            total_filtrado = len([l for l in st.session_state.lugares_data if l['tipo_general'] in tipos_simples])
+            st.info(f"**Mostrando {total_filtrado} lugares**")
+        else:
+            # Si no hay tipos seleccionados, mostrar todos
+            st.info(f"**Mostrando todos los {total_lugares} lugares**")
+        
+        # Botón para seleccionar todos nuevamente
+        if len(tipos_simples) != len(tipos_unicos):
+            if st.button("✅ Seleccionar todos los tipos", use_container_width=True):
+                st.session_state.tipos_seleccionados_multi = opciones_con_iconos.copy()
+                st.rerun()
     
     st.divider()
     
-    st.subheader("🎯 Tipos de lugares disponibles")
+    # Para la sección de tipos de lugares (solo referencia visual)
+    st.subheader("🗺️ Tipos de lugares disponibles")
     
-    # Mostrar tipos de lugares con conteos
-    tipos_conteo = {}
-    for lugar in st.session_state.lugares_data:
-        tipo = lugar['tipo_general']
-        if tipo not in tipos_conteo:
-            tipos_conteo[tipo] = 0
-        tipos_conteo[tipo] += 1
-    
-    tipos_lugares = [
-        {"icono": "🏘️", "tipo": "Localidad", "descripcion": "Poblados y comunidades"},
-        {"icono": "⛪", "tipo": "Santuario", "descripcion": "Espacios sagrados"},
-        {"icono": "🏔️", "tipo": "Glaciar", "descripcion": "Áreas de hielo ritual"},
-        {"icono": "✝️", "tipo": "Iglesia", "descripcion": "Templos y capillas"},
-        {"icono": "🛣️", "tipo": "Ruta", "descripcion": "Caminos rituales"},
-        {"icono": "📍", "tipo": "Lugar", "descripcion": "Otros espacios"}
-    ]
-    
-    # Mostrar solo los tipos que existen en los datos
-    for tipo_info in tipos_lugares:
-        tipo = tipo_info['tipo']
-        conteo = tipos_conteo.get(tipo, 0)
+    if st.session_state.grafo_cargado:
+        # Contar lugares por tipo
+        conteo_por_tipo = {}
+        for lugar in st.session_state.lugares_data:
+            tipo = lugar['tipo_general']
+            if tipo not in conteo_por_tipo:
+                conteo_por_tipo[tipo] = 0
+            conteo_por_tipo[tipo] += 1
         
-        # Solo mostrar tipos que existen
-        if conteo > 0:
-            col_tipo1, col_tipo2 = st.columns([1, 4])
-            with col_tipo1:
-                # Botón para seleccionar este tipo
-                if st.button(f"{tipo_info['icono']}", key=f"btn_{tipo}", help=f"Filtrar por {tipo}"):
-                    st.session_state.filtro_tipo = tipo
-                    st.rerun()
-            with col_tipo2:
-                # Resaltar si es el filtro actual
-                if tipo == st.session_state.filtro_tipo:
-                    st.markdown(f"**▶️ {tipo}** ({conteo})")
-                else:
-                    st.markdown(f"{tipo} ({conteo})")
-                st.caption(tipo_info['descripcion'])
+        # Mostrar lista simple
+        for tipo in sorted(conteo_por_tipo.keys()):
+            conteo = conteo_por_tipo[tipo]
+            icono = iconos_tipos.get(tipo, '📍')
+            st.markdown(f"**{icono} {tipo}**: {conteo} lugares")
     
     st.divider()
     

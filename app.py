@@ -378,7 +378,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     if not lugares_con_coords:
         return folium.Map(location=[center_lat, center_lon], zoom_start=zoom)
     
-    # Configuración de estilos de mapa
+    # Configuración de estilos de mapa - CORREGIDO: usar tiles públicos
     tile_layers = {
         "Relieve": {
             "tiles": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -396,12 +396,12 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             "name": "Mapa básico"
         },
         "Blanco y negro": {
-            "tiles": "https://tiles.stadiamaps.com/tiles/stamen_toner/{z}/{x}/{y}{r}.png",
-            "attr": "Stamen Toner",
+            "tiles": "https://tiles.wmflabs.org/bw-mapnik/{z}/{x}/{y}.png",
+            "attr": "OpenStreetMap",
             "name": "Blanco y negro"
         },
         "Claro": {
-            "tiles": "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png",
+            "tiles": "https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png",
             "attr": "CartoDB",
             "name": "Claro"
         }
