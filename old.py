@@ -43,7 +43,6 @@ RDF = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
 def obtener_relaciones_lugar(grafo, uri_lugar):
     """Obtiene relaciones para un lugar - VERSIÓN CON AGRUPACIÓN"""
     
-    # Extraer nombre del lugar de la URI para debug
     nombre_lugar = uri_lugar.split('#')[-1] if '#' in uri_lugar else uri_lugar.split('/')[-1]
     
     relaciones = {
@@ -55,7 +54,7 @@ def obtener_relaciones_lugar(grafo, uri_lugar):
         'naciones': []
     }
     
-    # 1. Eventos que ocurren en ESTE lugar específico (por URI exacta)
+    # 1. Eventos que ocurren en ESTE lugar específico
     query_eventos = f"""
     PREFIX : <http://example.org/festividades#>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -119,7 +118,6 @@ def obtener_relaciones_lugar(grafo, uri_lugar):
     try:
         for row in grafo.query(query_recursos):
             codigo = str(row.codigo)
-            # Determinar tipo basado en el código
             if "-FOTO-" in codigo: tipo_recurso = "Foto"
             elif "-VID-" in codigo: tipo_recurso = "Video"
             elif "-AUD-" in codigo: tipo_recurso = "Audio"
@@ -137,9 +135,8 @@ def obtener_relaciones_lugar(grafo, uri_lugar):
     return relaciones
 
 def crear_popup_html(lugar, relaciones):
-    """Crea HTML enriquecido para el popup con relaciones - VERSIÓN SIMPLIFICADA"""
+    """Crea HTML enriquecido para el popup con relaciones"""
     
-    # Escapar caracteres HTML
     nombre = html.escape(lugar['nombre'])
     descripcion = html.escape(lugar['descripcion'])
     
@@ -154,7 +151,6 @@ def crear_popup_html(lugar, relaciones):
     }
     color = colores_tipo.get(lugar['tipo_general'], '#95a5a6')
     
-    # HTML simplificado
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -164,7 +160,7 @@ def crear_popup_html(lugar, relaciones):
             body {{
                 margin: 0;
                 padding: 0;
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                font-family: 'Segoe UI', Tahoma, Geneva, sans-serif;
                 font-size: 14px;
                 color: #333;
                 line-height: 1.4;
@@ -367,7 +363,6 @@ def extraer_lugares(grafo):
 def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-71.97, zoom=10, estilo_mapa="Relieve"):
     """Crea un mapa Folium con múltiples estilos de mapa"""
     
-    # Filtrar lugares con coordenadas
     lugares_con_coords = [l for l in lugares_data if l['lat'] and l['lon']]
     
     if not lugares_con_coords:
@@ -382,7 +377,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
         tiles = "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
         attr = "OpenTopoMap"
         name = "Mapa topográfico"
-    else:  # OpenStreetMap por defecto
+    else:
         tiles = "OpenStreetMap"
         attr = "OpenStreetMap"
         name = "OpenStreetMap"
@@ -430,7 +425,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
         control=True
     ).add_to(mapa)
     
-    # Configurar iconos (más profesionales)
+    # Configurar iconos
     icon_configs = {
         'Localidad': {'color': 'blue', 'icon': 'home'},
         'Santuario': {'color': 'red', 'icon': 'star'},
@@ -480,7 +475,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             ).add_to(mapa)
             
         else:
-            # Múltiples lugares - crear popup especial simplificado
+            # Múltiples lugares - crear popup especial
             popup_html = f"""
             <!DOCTYPE html>
             <html>
@@ -549,7 +544,6 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
                 </div>
                 """
             
-            # Cerrar HTML
             popup_html += """
                     </div>
                 </div>
@@ -557,14 +551,12 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
             </html>
             """
             
-            # Crear iframe para el popup del grupo
             iframe_grupo = folium.IFrame(
                 html=popup_html,
                 width=400,
                 height=450
             )
             
-            # Crear marcador para el grupo
             folium.Marker(
                 location=[lat, lon],
                 popup=folium.Popup(iframe_grupo, max_width=400),
@@ -582,15 +574,11 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     return mapa
 
 # -------------------------------------------------------------------
-# INTERFAZ STREAMLIT MEJORADA
+# INTERFAZ STREAMLIT REORGANIZADA - 2 COLUMNAS SUPERIORES
 # -------------------------------------------------------------------
 
-# Título principal
-st.title("Mapa de la Festividad del Señor de Qoyllur Rit'i")
-st.markdown("Exploración interactiva de lugares rituales basada en información registrada durante 2025. La información es parcial y está en proceso de verificación.")
-
 # ============================================
-# 1. CARGAR DATOS AUTOMÁTICAMENTE
+# 1. CARGA AUTOMÁTICA DE DATOS (SILENCIOSA)
 # ============================================
 if not st.session_state.grafo_cargado:
     with st.spinner("Cargando datos del grafo..."):
@@ -603,188 +591,270 @@ if not st.session_state.grafo_cargado:
             st.session_state.lugares_data = lugares
             st.session_state.grafo = grafo
             st.session_state.mapa_cargado = True
-            st.success("Datos cargados correctamente")
         else:
             st.error(f"Error al cargar datos: {mensaje}")
 
 # ============================================
-# 2. LAYOUT PRINCIPAL
+# 2. CABECERA EN 2 COLUMNAS
+# ============================================
+col_titulo, col_instrucciones = st.columns([2, 1])
+
+with col_titulo:
+    # Título principal
+    st.markdown("# Mapa Interactivo de la Festividad del Señor de Qoyllur Rit'i")
+    
+    # Subtítulo
+    st.markdown("Exploración interactiva de lugares rituales basada en información registrada durante 2025. La información es parcial y está en proceso de verificación.")
+
+with col_instrucciones:
+    # Instrucciones en una tarjeta
+    with st.container():
+        st.markdown("### Cómo usar el mapa")
+        st.markdown("""
+        - **Haga click** en cualquier marcador para ver información detallada
+        - **Use el control de capas** para cambiar el estilo del mapa
+        - **Ajuste el zoom** con los controles o la rueda del mouse
+        - **Filtre por tipo** usando el panel lateral
+        """)
+
+st.divider()
+
+# ============================================
+# 3. CONTROLES DEL MAPA COMPACTOS
+# ============================================
+col_estilo, col_zoom, col_lat, col_lon, col_centrar = st.columns([2, 2, 2, 2, 1])
+
+with col_estilo:
+    estilo_mapa = st.selectbox(
+        "**Estilo del mapa**",
+        ["Relieve", "Topográfico", "Mapa básico", "Blanco y negro", "Claro"],
+        index=0
+    )
+
+with col_zoom:
+    zoom_level = st.slider("**Nivel de zoom**", 8, 15, 10)
+
+with col_lat:
+    centro_lat = st.number_input("**Latitud**", value=-13.53, format="%.4f", key="lat_input")
+
+with col_lon:
+    centro_lon = st.number_input("**Longitud**", value=-71.97, format="%.4f", key="lon_input")
+
+with col_centrar:
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("🔄 **Centrar**", use_container_width=True, type="secondary"):
+        st.session_state.mapa_cargado = True
+        st.rerun()
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ============================================
+# 4. MAPA PRINCIPAL - GRANDE
 # ============================================
 if st.session_state.grafo_cargado:
-    # Crear layout de 3 columnas
-    col_config, col_mapa, col_info = st.columns([1.2, 2, 0.8])
-    
-    with col_config:
-        # ============================================
-        # 3. COLUMNA IZQUIERDA: CONFIGURACIÓN TÉCNICA
-        # ============================================
-        st.subheader("Configuración del mapa")
-        
-        # Selector de estilo de mapa
-        estilo_mapa = st.selectbox(
-            "Estilo del mapa",
-            ["Relieve", "Topográfico", "Mapa básico", "Blanco y negro", "Claro"],
-            index=0
+    try:
+        # Crear el mapa
+        mapa = crear_mapa_interactivo(
+            st.session_state.grafo,
+            st.session_state.lugares_data,
+            centro_lat,
+            centro_lon,
+            zoom_level,
+            estilo_mapa
         )
         
-        st.divider()
+        # Mostrar mapa EN GRANDE
+        mapa_data = st_folium(
+            mapa,
+            width=None,
+            height=600,
+            returned_objects=["last_clicked", "last_object_clicked"]
+        )
         
-        # Información técnica
-        st.subheader("Información técnica")
+        # ============================================
+        # 5. INFORMACIÓN DE CLICK (DEBAJO DEL MAPA)
+        # ============================================
+        if mapa_data and mapa_data.get("last_object_clicked"):
+            clicked_lat = mapa_data["last_object_clicked"]["lat"]
+            clicked_lon = mapa_data["last_object_clicked"]["lng"]
+            
+            # Buscar lugares en ese punto
+            lugares_en_punto = []
+            
+            for lugar in st.session_state.lugares_data:
+                if lugar['lat'] and lugar['lon']:
+                    if (abs(lugar['lat'] - clicked_lat) < 0.0001 and 
+                        abs(lugar['lon'] - clicked_lon) < 0.0001):
+                        lugares_en_punto.append(lugar)
+            
+            if lugares_en_punto:
+                st.divider()
+                st.subheader("📍 Información del lugar seleccionado")
+                
+                if len(lugares_en_punto) == 1:
+                    lugar = lugares_en_punto[0]
+                    relaciones = obtener_relaciones_lugar(st.session_state.grafo, lugar['uri'])
+                    
+                    # Mostrar información en columnas compactas
+                    col_info1, col_info2 = st.columns([2, 1])
+                    
+                    with col_info1:
+                        st.markdown(f"### {lugar['nombre']}")
+                        st.write(f"**Descripción:** {lugar['descripcion']}")
+                    
+                    with col_info2:
+                        st.markdown(f"**Tipo:** {lugar['tipo_general']}")
+                        st.markdown(f"**Nivel:** {lugar['nivel']}")
+                        if lugar['ubicado_en']:
+                            st.markdown(f"**Ubicado en:** {lugar['ubicado_en']}")
+                    
+                    # Coordenadas
+                    st.markdown(f"**Coordenadas:** `{lugar['lat']:.6f}, {lugar['lon']:.6f}`")
+                    
+                    # Relaciones
+                    if relaciones['eventos']:
+                        with st.expander(f"📅 Eventos asociados ({len(relaciones['eventos'])})"):
+                            for evento in relaciones['eventos']:
+                                st.markdown(f"**• {evento['nombre']}**")
+                                if evento['descripcion']:
+                                    st.caption(evento['descripcion'])
+                    
+                    if relaciones['festividades']:
+                        with st.expander(f"🎉 Festividades ({len(relaciones['festividades'])})"):
+                            for fest in relaciones['festividades']:
+                                st.markdown(f"**• {fest['nombre']}**")
+                    
+                else:
+                    # Múltiples lugares
+                    st.write(f"**Múltiples lugares ({len(lugares_en_punto)}) en esta ubicación**")
+                    
+                    opciones = [f"{l['nombre']} ({l['tipo_general']})" for l in lugares_en_punto]
+                    seleccion = st.selectbox("Seleccionar lugar:", opciones, key="selector_lugar")
+                    
+                    idx = opciones.index(seleccion)
+                    lugar = lugares_en_punto[idx]
+                    relaciones = obtener_relaciones_lugar(st.session_state.grafo, lugar['uri'])
+                    
+                    col_ml1, col_ml2 = st.columns([2, 1])
+                    with col_ml1:
+                        st.markdown(f"**{lugar['nombre']}**")
+                        st.write(lugar['descripcion'])
+                    with col_ml2:
+                        st.markdown(f"*{lugar['tipo_general']}*")
+                        st.caption(f"Nivel: {lugar['nivel']}")
         
+    except Exception as e:
+        st.error(f"Error al crear el mapa: {str(e)}")
+else:
+    st.warning("Cargando datos del grafo... por favor espere.")
+
+# ============================================
+# 6. INFORMACIÓN DEL PROYECTO (DEBAJO DEL MAPA)
+# ============================================
+st.divider()
+st.markdown("### Información del Proyecto de Investigación")
+
+col_proyecto1, col_proyecto2 = st.columns([1, 2])
+
+with col_proyecto1:
+    st.markdown("#### Responsable del Proyecto")
+    st.markdown("""
+    **Javier Vera Zúñiga**
+    
+    *Investigador Principal*
+    
+    Proyecto: *"Grafos de conocimiento para la documentación de festividades andinas: 
+    Señor de Qoyllur Rit'i y Virgen del Carmen de Paucartambo"*
+    
+    Universidad Tecnológica del Perú (UTP)
+    """)
+    
+
+with col_proyecto2:
+    st.markdown("#### Equipo de Investigación")
+    
+    col_equipo1, col_equipo2 = st.columns(2)
+    
+    with col_equipo1:
+        st.markdown("**🏔️ Paucartambo (Cusco)**")
+        st.markdown("""
+        -
+        """)
+    
+    with col_equipo2:
+        st.markdown("**🏛️ Lima**")
+        st.markdown("""
+        - 
+        """)
+    
+    st.markdown("#### Objetivo Principal")
+    st.markdown("""
+    *Desarrollar una infraestructura basada en grafos de conocimiento para organizar y recuperar 
+    información patrimonial compleja asociada a las festividades del Señor de Qoyllur Rit'i 
+    y la Virgen del Carmen de Paucartambo.*
+    """)
+
+# Nota metodológica
+st.markdown("---")
+st.markdown("""
+*Este mapa interactivo forma parte del sistema de visualización del proyecto de investigación, 
+mostrando los lugares rituales documentados en el grafo de conocimiento. La información presentada 
+se basa en datos recopilados durante 2025-2026 mediante trabajo de campo, entrevistas estructuradas 
+y documentación institucional, siguiendo protocolos éticos de consentimiento informado y 
+confidencialidad.*
+""")
+
+# ============================================
+# 7. SIDEBAR CON INFORMACIÓN ADICIONAL
+# ============================================
+with st.sidebar:
+    st.header("Información del dataset")
+    
+    if st.session_state.grafo_cargado:
         total_lugares = len(st.session_state.lugares_data)
         lugares_con_coords = len([l for l in st.session_state.lugares_data if l['lat'] and l['lon']])
         
-        st.write(f"**Total de lugares:** {total_lugares}")
-        st.write(f"**Con coordenadas:** {lugares_con_coords}")
-        
-        # Distribución por tipo
-        if st.session_state.lugares_data:
-            df_lugares = pd.DataFrame(st.session_state.lugares_data)
-            distribucion = df_lugares['tipo_general'].value_counts()
-            
-            st.write("**Distribución por tipo:**")
-            for tipo, cantidad in distribucion.items():
-                st.write(f"• {tipo}: {cantidad}")
-        
-        st.divider()
-        
-        # Controles del mapa
-        st.subheader("Controles")
-        zoom_level = st.slider("Nivel de zoom", 8, 15, 10)
-        
-        col_lat, col_lon = st.columns(2)
-        with col_lat:
-            centro_lat = st.number_input("Latitud", value=-13.53, format="%.4f")
-        with col_lon:
-            centro_lon = st.number_input("Longitud", value=-71.97, format="%.4f")
-        
-        if st.button("Centrar mapa", use_container_width=True):
-            st.session_state.mapa_cargado = True
+        col_metric1, col_metric2 = st.columns(2)
+        with col_metric1:
+            st.metric("Total lugares", total_lugares)
+        with col_metric2:
+            st.metric("Con coords", lugares_con_coords)
     
-    with col_mapa:
-        # ============================================
-        # 4. COLUMNA CENTRAL: MAPA INTERACTIVO
-        # ============================================
-        st.subheader("Mapa interactivo")
-        
-        # Crear y mostrar mapa
-        try:
-            mapa = crear_mapa_interactivo(
-                st.session_state.grafo,
-                st.session_state.lugares_data,
-                centro_lat,
-                centro_lon,
-                zoom_level,
-                estilo_mapa
-            )
-            
-            # Mostrar mapa
-            mapa_data = st_folium(
-                mapa,
-                width=800,
-                height=600,
-                returned_objects=["last_clicked", "last_object_clicked"]
-            )
-            
-            # ============================================
-            # 5. PANEL DE INFORMACIÓN DE CLICK
-            # ============================================
-            if mapa_data and mapa_data.get("last_object_clicked"):
-                clicked_lat = mapa_data["last_object_clicked"]["lat"]
-                clicked_lon = mapa_data["last_object_clicked"]["lng"]
-                
-                # Buscar lugares en ese punto
-                lugares_en_punto = []
-                
-                for lugar in st.session_state.lugares_data:
-                    if lugar['lat'] and lugar['lon']:
-                        if (abs(lugar['lat'] - clicked_lat) < 0.0001 and 
-                            abs(lugar['lon'] - clicked_lon) < 0.0001):
-                            lugares_en_punto.append(lugar)
-                
-                if lugares_en_punto:
-                    st.divider()
-                    st.subheader("Información del lugar seleccionado")
-                    
-                    if len(lugares_en_punto) == 1:
-                        lugar = lugares_en_punto[0]
-                        relaciones = obtener_relaciones_lugar(st.session_state.grafo, lugar['uri'])
-                        
-                        st.write(f"**{lugar['nombre']}**")
-                        st.write(f"*{lugar['tipo_general']} - Nivel {lugar['nivel']}*")
-                        st.write(lugar['descripcion'])
-                        
-                        st.write(f"**Coordenadas:** {lugar['lat']:.6f}, {lugar['lon']:.6f}")
-                        if lugar['ubicado_en']:
-                            st.write(f"**Ubicado en:** {lugar['ubicado_en']}")
-                        
-                        # Mostrar relaciones
-                        if relaciones['eventos']:
-                            with st.expander(f"Eventos asociados ({len(relaciones['eventos'])})"):
-                                for evento in relaciones['eventos']:
-                                    st.write(f"**{evento['nombre']}**")
-                                    if evento['descripcion']:
-                                        st.caption(evento['descripcion'])
-                        
-                        if relaciones['festividades']:
-                            with st.expander(f"Festividades ({len(relaciones['festividades'])})"):
-                                for fest in relaciones['festividades']:
-                                    st.write(f"**{fest['nombre']}**")
-                    
-                    else:
-                        st.write(f"**{len(lugares_en_punto)} lugares en esta ubicación**")
-                        
-                        # Selector para elegir lugar
-                        opciones = [f"{l['nombre']} ({l['tipo_general']})" for l in lugares_en_punto]
-                        seleccion = st.selectbox("Seleccionar lugar:", opciones)
-                        
-                        idx = opciones.index(seleccion)
-                        lugar = lugares_en_punto[idx]
-                        relaciones = obtener_relaciones_lugar(st.session_state.grafo, lugar['uri'])
-                        
-                        st.write(f"**Descripción:** {lugar['descripcion']}")
-                        
-        except Exception as e:
-            st.error(f"Error al crear el mapa: {str(e)}")
-    
-    with col_info:
-        # ============================================
-        # 6. COLUMNA DERECHA: LEYENDA Y AYUDA
-        # ============================================
-        st.subheader("Leyenda")
-        
-        st.write("**Tipos de lugares:**")
-        st.write("• **Localidad**: Poblados y comunidades")
-        st.write("• **Santuario**: Espacios sagrados principales")
-        st.write("• **Glaciar**: Áreas de hielo ritual")
-        st.write("• **Iglesia**: Templos y capillas")
-        st.write("• **Ruta**: Caminos rituales")
-        st.write("• **Lugar**: Otros espacios significativos")
-        
-        st.divider()
-        
-        st.write("**Niveles de importancia:**")
-        st.write("• **A**: Entidades centrales")
-        st.write("• **B**: Contextuales")
-        st.write("• **C**: Estructurales")
-        
-        st.divider()
-        
-        st.write("**Cómo usar el mapa:**")
-        st.write("1. Haga click en cualquier marcador")
-        st.write("2. Use el control de capas para cambiar el estilo")
-        st.write("3. Ajuste el zoom con los controles")
-    
-    # ============================================
-    # 7. PIE DE PÁGINA
-    # ============================================
     st.divider()
-    st.caption("""
-    **Mapa Interactivo del Señor de Qoyllur Rit'i** | 
-    Datos extraídos del grafo de conocimiento TTL | 
-    Información registrada durante 2025 - En proceso de verificación
+    
+    st.subheader("Tipos de lugares")
+    
+    tipos_lugares = [
+        {"icono": "🏘️", "tipo": "Localidad", "descripcion": "Poblados y comunidades"},
+        {"icono": "⛪", "tipo": "Santuario", "descripcion": "Espacios sagrados"},
+        {"icono": "🏔️", "tipo": "Glaciar", "descripcion": "Áreas de hielo ritual"},
+        {"icono": "✝️", "tipo": "Iglesia", "descripcion": "Templos y capillas"},
+        {"icono": "🛣️", "tipo": "Ruta", "descripcion": "Caminos rituales"},
+        {"icono": "📍", "tipo": "Lugar", "descripcion": "Otros espacios"}
+    ]
+    
+    for tipo_info in tipos_lugares:
+        st.markdown(f"**{tipo_info['icono']} {tipo_info['tipo']}**")
+        st.caption(tipo_info['descripcion'])
+    
+    st.divider()
+    
+    st.subheader("📈 Distribución por tipo")
+    if st.session_state.grafo_cargado and st.session_state.lugares_data:
+        df_lugares = pd.DataFrame(st.session_state.lugares_data)
+        distribucion = df_lugares['tipo_general'].value_counts()
+        
+        for tipo, cantidad in distribucion.items():
+            porcentaje = (cantidad / total_lugares) * 100
+            st.markdown(f"• **{tipo}**: {cantidad} ({porcentaje:.1f}%)")
+    
+    st.divider()
+    
+    st.subheader("Niveles de importancia")
+    st.markdown("""
+    **A**: Entidades centrales  
+    **B**: Contextuales  
+    **C**: Estructurales
+    
+    *Basado en el estándar del grafo TTL*
     """)
-else:
-    # Pantalla de error si no se cargan datos
-    st.error("No se pudieron cargar los datos del grafo. Por favor, verifique la conexión.")

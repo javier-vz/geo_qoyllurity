@@ -13,6 +13,8 @@ from streamlit_folium import st_folium
 from folium import plugins
 import html
 import math
+import base64
+import requests
 
 # Configuración de la página
 st.set_page_config(
@@ -21,6 +23,20 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# URLs de imágenes
+IMAGEN_MONTAÑA_URL = "https://github.com/javier-vz/geo_qoyllurity/raw/main/imagenes/1750608881981.jpg"
+
+# Función para convertir imagen a base64
+def get_base64_image(url):
+    """Convierte una imagen de URL a base64 para mejor rendimiento"""
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        return base64.b64encode(response.content).decode()
+    except Exception as e:
+        st.warning(f"No se pudo cargar la imagen: {e}")
+        return None
 
 # Inicializar session state
 if 'grafo_cargado' not in st.session_state:
@@ -574,7 +590,7 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     return mapa
 
 # -------------------------------------------------------------------
-# INTERFAZ STREAMLIT REORGANIZADA - 2 COLUMNAS SUPERIORES
+# INTERFAZ STREAMLIT REORGANIZADA - CON IMAGENES
 # -------------------------------------------------------------------
 
 # ============================================
@@ -594,27 +610,113 @@ if not st.session_state.grafo_cargado:
         else:
             st.error(f"Error al cargar datos: {mensaje}")
 
-# ============================================
-# 2. CABECERA EN 2 COLUMNAS
-# ============================================
-col_titulo, col_instrucciones = st.columns([2, 1])
+# Convertir imagen a base64 para mejor rendimiento
+imagen_base64 = get_base64_image(IMAGEN_MONTAÑA_URL)
 
-with col_titulo:
-    # Título principal
-    st.markdown("# Mapa Interactivo de la Festividad del Señor de Qoyllur Rit'i")
+# ============================================
+# 2. CABECERA CON IMAGEN DE FONDO (OPCIÓN 1)
+# ============================================
+if imagen_base64:
+    st.markdown(f"""
+    <style>
+    .header-container {{
+        position: relative;
+        width: 100%;
+        height: 250px;
+        background-image: url("data:image/jpeg;base64,{imagen_base64}");
+        background-size: cover;
+        background-position: center 30%;
+        border-radius: 12px;
+        margin-bottom: 25px;
+        overflow: hidden;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }}
     
-    # Subtítulo
+    .header-overlay {{
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(to right, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.3) 100%);
+        padding: 35px 40px;
+        color: white;
+        display: flex;
+        align-items: center;
+    }}
+    
+    .header-content {{
+        max-width: 70%;
+    }}
+    
+    .header-title {{
+        margin: 0;
+        color: white;
+        font-size: 32px;
+        font-weight: 700;
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+        line-height: 1.2;
+        margin-bottom: 10px;
+    }}
+    
+    .header-subtitle {{
+        color: rgba(255,255,255,0.9);
+        font-size: 16px;
+        margin-top: 8px;
+        line-height: 1.4;
+        max-width: 80%;
+    }}
+    
+    @media (max-width: 768px) {{
+        .header-container {{
+            height: 200px;
+        }}
+        .header-title {{
+            font-size: 24px;
+        }}
+        .header-subtitle {{
+            font-size: 14px;
+            max-width: 95%;
+        }}
+        .header-content {{
+            max-width: 85%;
+        }}
+    }}
+    </style>
+    
+    <div class="header-container">
+        <div class="header-overlay">
+            <div class="header-content">
+                <h1 class="header-title">Mapa Interactivo de la Festividad del Señor de Qoyllur Rit'i</h1>
+                <p class="header-subtitle">
+                    Exploración interactiva de lugares rituales basada en información registrada durante 2025. 
+                    La información es parcial y está en proceso de verificación.
+                </p>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    # Fallback si no se carga la imagen
+    st.markdown("# Mapa Interactivo de la Festividad del Señor de Qoyllur Rit'i")
     st.markdown("Exploración interactiva de lugares rituales basada en información registrada durante 2025. La información es parcial y está en proceso de verificación.")
 
-with col_instrucciones:
-    # Instrucciones en una tarjeta
+# Instrucciones en una tarjeta a la derecha
+col_instrucciones1, col_instrucciones2 = st.columns([2, 1])
+
+with col_instrucciones2:
     with st.container():
-        st.markdown("### Cómo usar el mapa")
+        st.markdown("### 🎯 Cómo usar el mapa")
         st.markdown("""
-        - **Haga click** en cualquier marcador para ver información detallada
-        - **Use el control de capas** para cambiar el estilo del mapa
-        - **Ajuste el zoom** con los controles o la rueda del mouse
-        - **Filtre por tipo** usando el panel lateral
+        **📍 Haga click** en cualquier marcador para ver información detallada
+        
+        **🗺️ Use el control de capas** para cambiar el estilo del mapa
+        
+        **🔍 Ajuste el zoom** con los controles o la rueda del mouse
+        
+        **🎯 Filtre por tipo** usando el panel lateral
+        
+        **🔄 Centro el mapa** con las coordenadas
         """)
 
 st.divider()
@@ -628,11 +730,12 @@ with col_estilo:
     estilo_mapa = st.selectbox(
         "**Estilo del mapa**",
         ["Relieve", "Topográfico", "Mapa básico", "Blanco y negro", "Claro"],
-        index=0
+        index=0,
+        help="Seleccione el estilo visual del mapa"
     )
 
 with col_zoom:
-    zoom_level = st.slider("**Nivel de zoom**", 8, 15, 10)
+    zoom_level = st.slider("**Nivel de zoom**", 8, 15, 10, help="Ajuste el nivel de zoom del mapa")
 
 with col_lat:
     centro_lat = st.number_input("**Latitud**", value=-13.53, format="%.4f", key="lat_input")
@@ -752,12 +855,12 @@ else:
 # 6. INFORMACIÓN DEL PROYECTO (DEBAJO DEL MAPA)
 # ============================================
 st.divider()
-st.markdown("### Información del Proyecto de Investigación")
+st.markdown("### 📋 Información del Proyecto de Investigación")
 
 col_proyecto1, col_proyecto2 = st.columns([1, 2])
 
 with col_proyecto1:
-    st.markdown("#### Responsable del Proyecto")
+    st.markdown("#### 👤 Responsable del Proyecto")
     st.markdown("""
     **Javier Vera Zúñiga**
     
@@ -769,25 +872,40 @@ with col_proyecto1:
     Universidad Tecnológica del Perú (UTP)
     """)
     
+    st.markdown("#### 🌐 Proyecto UTP 2026")
+    st.markdown("""
+    - **Categoría:** Nivel 2
+    - **Línea de investigación:** Computación Científica
+    - **ODS principales:** 11, 10, 9, 4
+    - **Tipo:** Investigación en Ciencias Aplicadas
+    """)
 
 with col_proyecto2:
-    st.markdown("#### Equipo de Investigación")
+    st.markdown("#### 🤝 Equipo de Investigación")
     
     col_equipo1, col_equipo2 = st.columns(2)
     
     with col_equipo1:
         st.markdown("**🏔️ Paucartambo (Cusco)**")
         st.markdown("""
-        -
+        - Comunidades locales participantes
+        - Portadores de roles rituales
+        - Autoridades tradicionales
+        - Guías y coordinadores locales
+        - Registradores de campo comunitarios
         """)
     
     with col_equipo2:
         st.markdown("**🏛️ Lima**")
         st.markdown("""
-        - 
+        - Equipo de investigación UTP
+        - Especialistas en ciencia de datos
+        - Asesores académicos patrimoniales
+        - Desarrolladores de software
+        - Tesistas de ingeniería
         """)
     
-    st.markdown("#### Objetivo Principal")
+    st.markdown("#### 🎯 Objetivo Principal")
     st.markdown("""
     *Desarrollar una infraestructura basada en grafos de conocimiento para organizar y recuperar 
     información patrimonial compleja asociada a las festividades del Señor de Qoyllur Rit'i 
@@ -805,10 +923,24 @@ confidencialidad.*
 """)
 
 # ============================================
-# 7. SIDEBAR CON INFORMACIÓN ADICIONAL
+# 7. SIDEBAR CON IMAGEN (OPCIÓN 2)
 # ============================================
 with st.sidebar:
-    st.header("Información del dataset")
+    # Imagen en la parte superior del sidebar
+    if imagen_base64:
+        st.markdown(f"""
+        <div style="text-align: center; margin-bottom: 20px; padding: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <img src="data:image/jpeg;base64,{imagen_base64}" style="width: 100%; border-radius: 8px; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+            <p style="font-size: 12px; color: white; margin-top: 10px; font-weight: 500; font-style: italic;">
+                Santuario del Señor de Qoyllur Rit'i
+            </p>
+            <p style="font-size: 10px; color: rgba(255,255,255,0.8); margin-top: -5px;">
+                Proyecto de Investigación UTP 2026
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.header("📊 Información del dataset")
     
     if st.session_state.grafo_cargado:
         total_lugares = len(st.session_state.lugares_data)
@@ -822,7 +954,7 @@ with st.sidebar:
     
     st.divider()
     
-    st.subheader("Tipos de lugares")
+    st.subheader("🎯 Tipos de lugares")
     
     tipos_lugares = [
         {"icono": "🏘️", "tipo": "Localidad", "descripcion": "Poblados y comunidades"},
@@ -850,7 +982,7 @@ with st.sidebar:
     
     st.divider()
     
-    st.subheader("Niveles de importancia")
+    st.subheader("ℹ️ Niveles de importancia")
     st.markdown("""
     **A**: Entidades centrales  
     **B**: Contextuales  
@@ -858,3 +990,13 @@ with st.sidebar:
     
     *Basado en el estándar del grafo TTL*
     """)
+
+# ============================================
+# 8. PIE DE PÁGINA DISCRETO
+# ============================================
+st.markdown("<br><br>", unsafe_allow_html=True)
+st.divider()
+st.caption("""
+**Mapa Interactivo del Señor de Qoyllur Rit'i** | Proyecto UTP 2026 | 
+Datos del grafo de conocimiento TTL | Información registrada 2025 - En proceso de verificación
+""")
