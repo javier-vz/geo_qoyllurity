@@ -952,63 +952,78 @@ with st.sidebar:
             # Crear opciones con iconos
             opciones_con_iconos = [f"{iconos_tipos.get(tipo, '📍')} {tipo}" for tipo in todos_tipos]
             
-            # Determinar valores por defecto para el multiselect
-            if st.session_state.tipos_seleccionados:
-                # Convertir tipos seleccionados a formato con iconos
+            # ============================================
+            # SOLUCIÓN: USAR FORMULARIO PARA ACTUALIZACIÓN AUTOMÁTICA
+            # ============================================
+            with st.form(key='filtro_form'):
+                # Determinar valores por defecto
+                tipos_actuales = st.session_state.tipos_seleccionados
                 default_seleccionados = []
-                for tipo in st.session_state.tipos_seleccionados:
+                for tipo in tipos_actuales:
                     icono = iconos_tipos.get(tipo, '📍')
                     default_seleccionados.append(f"{icono} {tipo}")
-            else:
-                default_seleccionados = opciones_con_iconos  # Todos por defecto
+                
+                # USAR SELECTBOX MULTIPLE DENTRO DEL FORM
+                seleccionados_con_iconos = st.multiselect(
+                    "**Seleccionar tipos a mostrar:**",
+                    options=opciones_con_iconos,
+                    default=default_seleccionados,
+                    help="Selecciona los tipos de lugares que quieres ver en el mapa"
+                )
+                
+                # Botón para aplicar filtro
+                col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
+                
+                with col_btn1:
+                    aplicar = st.form_submit_button("✅ **Aplicar**", use_container_width=True)
+                
+                with col_btn2:
+                    todos = st.form_submit_button("Todos", use_container_width=True, type="secondary")
+                
+                with col_btn3:
+                    ninguno = st.form_submit_button("Ninguno", use_container_width=True, type="secondary")
             
-            # USAR SELECTBOX MULTIPLE
-            seleccionados_con_iconos = st.multiselect(
-                "**Seleccionar tipos a mostrar:**",
-                options=opciones_con_iconos,
-                default=default_seleccionados,
-                key="filtro_multiselect",
-                help="Selecciona los tipos de lugares que quieres ver en el mapa"
-            )
-            
-            # Convertir de nuevo a tipos simples (sin iconos)
-            tipos_seleccionados = []
-            for seleccion in seleccionados_con_iconos:
-                for icono in ['🏘️ ', '⛪ ', '🏔️ ', '✝️ ', '🛣️ ', '📍 ']:
-                    if seleccion.startswith(icono):
-                        tipos_seleccionados.append(seleccion.replace(icono, '', 1))
-                        break
-            
-            # Actualizar session state
-            st.session_state.tipos_seleccionados = tipos_seleccionados
-            
-            # BOTONES DE CONTROL
-            st.markdown("---")
-            col_btn1, col_btn2 = st.columns(2)
-            
-            with col_btn1:
-                if st.button("✅ **Todos**", use_container_width=True, type="secondary"):
-                    st.session_state.tipos_seleccionados = todos_tipos.copy()
-                    st.rerun()
-            
-            with col_btn2:
-                if st.button("❌ **Ninguno**", use_container_width=True, type="secondary"):
-                    st.session_state.tipos_seleccionados = []
-                    st.rerun()
+            # Procesar la selección cuando se presiona el botón
+            if aplicar or todos or ninguno:
+                if todos:
+                    # Seleccionar todos
+                    tipos_seleccionados = todos_tipos.copy()
+                elif ninguno:
+                    # Limpiar selección
+                    tipos_seleccionados = []
+                else:
+                    # Usar lo seleccionado en el multiselect
+                    tipos_seleccionados = []
+                    for seleccion in seleccionados_con_iconos:
+                        for icono in ['🏘️ ', '⛪ ', '🏔️ ', '✝️ ', '🛣️ ', '📍 ']:
+                            if seleccion.startswith(icono):
+                                tipos_seleccionados.append(seleccion.replace(icono, '', 1))
+                                break
+                
+                # Actualizar session state
+                st.session_state.tipos_seleccionados = tipos_seleccionados
+                st.rerun()  # Forzar actualización
             
             # Mostrar estadísticas del filtro actual
             st.markdown("---")
-            if tipos_seleccionados:
+            tipos_actuales = st.session_state.tipos_seleccionados
+            
+            if tipos_actuales:
                 total_filtrado = len([l for l in st.session_state.lugares_data 
-                                    if l['tipo_general'] in tipos_seleccionados])
+                                    if l['tipo_general'] in tipos_actuales])
                 
-                if len(tipos_seleccionados) == len(todos_tipos):
+                if len(tipos_actuales) == len(todos_tipos):
                     st.success(f"✅ **Mostrando todos**")
                     st.caption(f"{total_filtrado} lugares visibles")
                 else:
                     st.info(f"📍 **Filtro activo**")
                     st.caption(f"{total_filtrado} de {total_lugares} lugares")
-                    st.caption(f"{len(tipos_seleccionados)} de {len(todos_tipos)} tipos seleccionados")
+                    st.caption(f"{len(tipos_actuales)} de {len(todos_tipos)} tipos seleccionados")
+                    
+                    # Mostrar tipos seleccionados
+                    if len(tipos_actuales) <= 4:
+                        tipos_texto = ", ".join(tipos_actuales)
+                        st.caption(f"Tipos: {tipos_texto}")
             else:
                 st.warning("⚠️ **Sin selección**")
                 st.caption("Selecciona al menos un tipo para ver lugares")
