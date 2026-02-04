@@ -829,7 +829,7 @@ with st.sidebar:
     # Imagen simple en el sidebar
     st.markdown(f"""
     <div style="text-align: center; margin-bottom: 15px;">
-        <img src="{IMAGEN_MONTAÑA_URL}" style="width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <img src="{IMAGEN_MONTAÑA_URL}" style="width: 100%; border-radius: 8px;">
         <p style="font-size: 12px; color: #666; margin-top: 5px; font-style: italic;">
             Fotografía de la Festividad del Señor de Qoyllur Rit'i (2025)
         </p>
@@ -850,19 +850,7 @@ with st.sidebar:
     
     st.divider()
     
-    # Tarjeta de filtros con mejor diseño
-    st.markdown("""
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                padding: 15px; 
-                border-radius: 10px; 
-                margin-bottom: 20px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-        <h3 style="color: white; margin: 0; font-size: 18px;">🎯 Filtros de lugares</h3>
-        <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 13px;">
-            Selecciona uno o varios tipos de lugares para filtrar
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader("🎯 Filtros de lugares")
     
     # Obtener tipos únicos de lugares
     if st.session_state.grafo_cargado:
@@ -882,190 +870,54 @@ with st.sidebar:
         # Crear opciones con iconos
         opciones_con_iconos = [f"{iconos_tipos.get(tipo, '📍')} {tipo}" for tipo in tipos_unicos]
         
-        # Multiselect con mejor diseño
-        st.markdown("**Seleccionar tipos:**")
+        # Usar st.multiselect como pediste
+        tipos_seleccionados = st.multiselect(
+            "**Seleccionar tipos:**",
+            opciones_con_iconos,
+            default=opciones_con_iconos,  # Por defecto seleccionar todos
+            help="Selecciona uno o varios tipos de lugares para filtrar"
+        )
         
-        # Crear columnas para los checkboxes
-        cols_check = st.columns(2)
+        # Convertir de nuevo a tipos simples (sin iconos)
+        tipos_simples = [tipo.replace("🏘️ ", "").replace("⛪ ", "").replace("🏔️ ", "").replace("✝️ ", "").replace("🛣️ ", "").replace("📍 ", "") for tipo in tipos_seleccionados]
         
-        # Inicializar lista de seleccionados si no existe
-        if 'tipos_seleccionados' not in st.session_state:
-            st.session_state.tipos_seleccionados = []
-        
-        # Crear checkboxes para cada tipo
-        tipos_seleccionados_actual = []
-        
-        for i, tipo in enumerate(tipos_unicos):
-            col_idx = i % 2
-            icono = iconos_tipos.get(tipo, '📍')
-            
-            with cols_check[col_idx]:
-                # Verificar si está seleccionado
-                is_selected = tipo in st.session_state.tipos_seleccionados
-                
-                # Crear un checkbox con mejor estilo
-                if st.checkbox(
-                    f"{icono} {tipo}",
-                    value=is_selected,
-                    key=f"chk_{tipo}",
-                    help=f"Mostrar/ocultar lugares de tipo {tipo}"
-                ):
-                    tipos_seleccionados_actual.append(tipo)
-        
-        # Actualizar los tipos seleccionados
-        if tipos_seleccionados_actual != st.session_state.tipos_seleccionados:
-            st.session_state.tipos_seleccionados = tipos_seleccionados_actual
-            st.rerun()
-        
-        # Mostrar resumen de selección
-        if st.session_state.tipos_seleccionados:
-            st.success(f"✅ Mostrando {len(st.session_state.tipos_seleccionados)} tipo(s) seleccionado(s)")
-            
-            # Mostrar badges de los tipos seleccionados
-            badges_html = ""
-            for tipo in st.session_state.tipos_seleccionados:
-                color = {
-                    'Localidad': '#3498db',
-                    'Santuario': '#e74c3c',
-                    'Glaciar': '#1abc9c',
-                    'Iglesia': '#9b59b6',
-                    'Ruta': '#e67e22',
-                    'Lugar': '#2ecc71'
-                }.get(tipo, '#95a5a6')
-                
-                badges_html += f"""
-                <span style="display: inline-block; background-color: {color}; 
-                color: white; padding: 4px 8px; margin: 2px; border-radius: 12px; 
-                font-size: 12px; font-weight: 500;">
-                    {iconos_tipos.get(tipo, '📍')} {tipo}
-                </span>
-                """
-            
-            st.markdown(f"""
-            <div style="margin-top: 10px; margin-bottom: 10px;">
-                {badges_html}
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Contar lugares de cada tipo seleccionado
-            conteo_por_tipo = {}
-            for tipo in st.session_state.tipos_seleccionados:
-                conteo = len([l for l in st.session_state.lugares_data if l['tipo_general'] == tipo])
-                conteo_por_tipo[tipo] = conteo
-            
-            total_filtrado = sum(conteo_por_tipo.values())
-            st.info(f"**📍 Mostrando {total_filtrado} lugares en total**")
-            
-            # Botón para limpiar todos los filtros
-            if st.button("🧹 Limpiar todos los filtros", use_container_width=True, type="secondary"):
-                st.session_state.tipos_seleccionados = []
-                st.rerun()
+        # Mostrar contador
+        if tipos_simples:
+            total_filtrado = len([l for l in st.session_state.lugares_data if l['tipo_general'] in tipos_simples])
+            st.info(f"**Mostrando {total_filtrado} lugares**")
         else:
-            st.warning("ℹ️ No hay filtros activos. Mostrando todos los lugares.")
-            
-            # Botón para seleccionar todos
-            if st.button("✅ Seleccionar todos los tipos", use_container_width=True):
-                st.session_state.tipos_seleccionados = tipos_unicos.copy()
-                st.rerun()
-        
-        st.divider()
-        
-        # Sección de tipos disponibles (solo para referencia)
-        st.markdown("#### 🗺️ Tipos de lugares disponibles")
-        
-        # Crear tarjetas para cada tipo
-        for tipo_info in [
-            {"icono": "🏘️", "tipo": "Localidad", "descripcion": "Poblados y comunidades"},
-            {"icono": "⛪", "tipo": "Santuario", "descripcion": "Espacios sagrados"},
-            {"icono": "🏔️", "tipo": "Glaciar", "descripcion": "Áreas de hielo ritual"},
-            {"icono": "✝️", "tipo": "Iglesia", "descripcion": "Templos y capillas"},
-            {"icono": "🛣️", "tipo": "Ruta", "descripcion": "Caminos rituales"},
-            {"icono": "📍", "tipo": "Lugar", "descripcion": "Otros espacios"}
-        ]:
-            tipo = tipo_info['tipo']
-            if tipo in tipos_unicos:
-                conteo = len([l for l in st.session_state.lugares_data if l['tipo_general'] == tipo])
-                
-                # Determinar si está seleccionado
-                is_selected = tipo in st.session_state.tipos_seleccionados
-                
-                # Color de fondo según selección
-                bg_color = '#f0f8ff' if is_selected else '#ffffff'
-                border_color = '#3498db' if is_selected else '#e0e0e0'
-                
-                st.markdown(f"""
-                <div style="background-color: {bg_color}; 
-                            border: 1px solid {border_color}; 
-                            border-radius: 8px; 
-                            padding: 10px 12px; 
-                            margin-bottom: 8px;
-                            cursor: pointer;
-                            transition: all 0.3s ease;">
-                    <div style="display: flex; align-items: center; justify-content: space-between;">
-                        <div style="display: flex; align-items: center;">
-                            <span style="font-size: 20px; margin-right: 10px;">{tipo_info['icono']}</span>
-                            <div>
-                                <div style="font-weight: 600; color: #2c3e50;">
-                                    {tipo_info['tipo']} 
-                                    <span style="font-weight: 400; color: #666; font-size: 13px;">
-                                        ({conteo})
-                                    </span>
-                                </div>
-                                <div style="font-size: 12px; color: #666;">
-                                    {tipo_info['descripcion']}
-                                </div>
-                            </div>
-                        </div>
-                        <div style="color: {'#3498db' if is_selected else '#999'}; font-size: 14px;">
-                            {'✅' if is_selected else '⬜'}
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Hacer que toda la tarjeta sea clickeable (usando st.button no es directo aquí)
-                # En su lugar, usaremos la funcionalidad de checkboxes de arriba
+            st.warning("No hay tipos seleccionados. Mostrando todos los lugares.")
     
     st.divider()
     
-    st.markdown("#### ℹ️ Niveles de importancia")
+    # Para la sección de tipos de lugares (solo referencia visual)
+    st.subheader("🗺️ Tipos de lugares")
     
-    # Tarjeta de niveles con mejor diseño
+    if st.session_state.grafo_cargado:
+        # Contar lugares por tipo
+        conteo_por_tipo = {}
+        for lugar in st.session_state.lugares_data:
+            tipo = lugar['tipo_general']
+            if tipo not in conteo_por_tipo:
+                conteo_por_tipo[tipo] = 0
+            conteo_por_tipo[tipo] += 1
+        
+        # Mostrar lista simple
+        for tipo in sorted(conteo_por_tipo.keys()):
+            conteo = conteo_por_tipo[tipo]
+            icono = iconos_tipos.get(tipo, '📍')
+            st.markdown(f"**{icono} {tipo}**: {conteo} lugares")
+    
+    st.divider()
+    
+    st.subheader("ℹ️ Niveles de importancia")
     st.markdown("""
-    <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
-                padding: 15px; 
-                border-radius: 10px; 
-                margin-bottom: 10px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-        <h4 style="color: white; margin: 0 0 10px 0; font-size: 16px;">📊 Niveles del grafo</h4>
-        <div style="background: rgba(255,255,255,0.9); padding: 10px; border-radius: 6px;">
-            <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                <div style="width: 20px; height: 20px; background-color: #e74c3c; border-radius: 4px; margin-right: 10px;"></div>
-                <div>
-                    <strong style="color: #2c3e50;">A</strong>
-                    <div style="font-size: 12px; color: #666;">Entidades centrales</div>
-                </div>
-            </div>
-            <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                <div style="width: 20px; height: 20px; background-color: #3498db; border-radius: 4px; margin-right: 10px;"></div>
-                <div>
-                    <strong style="color: #2c3e50;">B</strong>
-                    <div style="font-size: 12px; color: #666;">Contextuales</div>
-                </div>
-            </div>
-            <div style="display: flex; align-items: center;">
-                <div style="width: 20px; height: 20px; background-color: #2ecc71; border-radius: 4px; margin-right: 10px;"></div>
-                <div>
-                    <strong style="color: #2c3e50;">C</strong>
-                    <div style="font-size: 12px; color: #666;">Estructurales</div>
-                </div>
-            </div>
-        </div>
-        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 11px; font-style: italic;">
-            Basado en el estándar del grafo TTL
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    **A**: Entidades centrales  
+    **B**: Contextuales  
+    **C**: Estructurales
+    
+    *Basado en el estándar del grafo TTL*
+    """)
 
 # ============================================
 # 8. PIE DE PÁGINA
