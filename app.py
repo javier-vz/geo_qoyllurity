@@ -17,7 +17,7 @@ import math
 
 # Configuración de la página
 st.set_page_config(
-    page_title="Mapa Qoyllur Rit'i",
+    page_title="Mapa del Señor de Qoyllur Rit'i",
     page_icon="⛰️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -77,9 +77,9 @@ def obtener_relaciones_lugar(grafo, uri_lugar):
                 'nombre': str(row.nombre),
                 'descripcion': str(row.descripcion) if row.descripcion else None
             })
-        print(f"  ✅ Eventos encontrados: {len(relaciones['eventos'])}")
+        print(f"  Eventos encontrados: {len(relaciones['eventos'])}")
     except Exception as e:
-        print(f"  ❌ Error en query eventos: {str(e)}")
+        print(f"  Error en query eventos: {str(e)}")
     
     # 2. Festividades que se celebran en ESTE lugar específico
     query_festividades = f"""
@@ -102,9 +102,9 @@ def obtener_relaciones_lugar(grafo, uri_lugar):
                 'nombre': str(row.nombre),
                 'descripcion': str(row.descripcion) if row.descripcion else None
             })
-        print(f"  ✅ Festividades encontradas: {len(relaciones['festividades'])}")
+        print(f"  Festividades encontradas: {len(relaciones['festividades'])}")
     except Exception as e:
-        print(f"  ❌ Error en query festividades: {str(e)}")
+        print(f"  Error en query festividades: {str(e)}")
     
     # 3. Recursos multimedia que documentan ESTE lugar
     query_recursos = f"""
@@ -134,9 +134,9 @@ def obtener_relaciones_lugar(grafo, uri_lugar):
                 'tipo': tipo_recurso,
                 'ruta': ""
             })
-        print(f"  ✅ Recursos encontrados: {len(relaciones['recursos'])}")
+        print(f"  Recursos encontrados: {len(relaciones['recursos'])}")
     except Exception as e:
-        print(f"  ❌ Error en query recursos: {str(e)}")
+        print(f"  Error en query recursos: {str(e)}")
     
     return relaciones
 
@@ -355,7 +355,7 @@ def extraer_lugares(grafo):
             'ubicado_en': str(row.primerUbicadoEn) if row.primerUbicadoEn else None
         })
     
-    print(f"📍 Lugares únicos extraídos: {len(resultados)}")
+    print(f" Lugares únicos extraídos: {len(resultados)}")
     
     # Debug: mostrar los primeros 5 lugares
     for i, lugar in enumerate(resultados[:5]):
@@ -551,9 +551,9 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     folium.LayerControl().add_to(mapa)
     
     # Debug info en consola
-    print(f"✅ Marcadores individuales: {marcadores_individiales}")
-    print(f"✅ Marcadores de grupo: {marcadores_grupo}")
-    print(f"✅ Total marcadores: {marcadores_individiales + marcadores_grupo}")
+    print(f"Marcadores individuales: {marcadores_individiales}")
+    print(f"Marcadores de grupo: {marcadores_grupo}")
+    print(f"Total marcadores: {marcadores_individiales + marcadores_grupo}")
     
     return mapa
 
@@ -601,8 +601,8 @@ with st.sidebar:
             st.metric("Tipo Principal", tipo_mas_comun)
 
 # Contenido principal
-st.title("🗺️ Mapa Interactivo - Qoyllur Rit'i")
-st.markdown("### Explora lugares rituales con sus relaciones del grafo de conocimiento")
+st.title("🗺️ Mapa Interactivo de la Festividad del Señor de Qoyllur Rit'i")
+st.markdown("### Explora lugares de a partir de información registrada durante 2025. Toda la informacipón es parcial, y puede contener errores.")
 
 if not st.session_state.grafo_cargado:
     # Pantalla de bienvenida
@@ -611,17 +611,12 @@ if not st.session_state.grafo_cargado:
     with col2:
         st.image("https://cdn-icons-png.flaticon.com/512/825/825526.png", width=120)
         st.markdown("""
-        ### Bienvenido
+        ### Bienvenidos!
         
         **Para comenzar:**
         1. Verifica la URL del grafo en la barra lateral
         2. Haz clic en **"Cargar Datos"**
         3. Explora los lugares haciendo click en los marcadores
-        
-        **✨ Nuevas características:**
-        - Popups con información relacional
-        - Eventos, festividades y recursos multimedia
-        - Iconos personalizados por tipo
         """)
 else:
     # Controles del mapa
