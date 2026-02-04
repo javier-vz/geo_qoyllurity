@@ -682,13 +682,25 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ============================================
 if st.session_state.grafo_cargado:
     try:
-        # Filtrar lugares si hay un filtro activo
-        if st.session_state.filtro_tipo and st.session_state.filtro_tipo != "Todos":
-            lugares_a_mostrar = [l for l in st.session_state.lugares_data if l['tipo_general'] == st.session_state.filtro_tipo]
+        # LÓGICA CORREGIDA: Usar session_state
+        # Inicializar si no existe
+        if 'tipos_simples_filtro' not in st.session_state:
+            st.session_state.tipos_simples_filtro = []
+        
+        # Filtrar lugares según tipos seleccionados
+        if st.session_state.tipos_simples_filtro:
+            # Mostrar solo los tipos seleccionados
+            lugares_a_mostrar = [
+                l for l in st.session_state.lugares_data 
+                if l['tipo_general'] in st.session_state.tipos_simples_filtro
+            ]
             lugares_destacados = lugares_a_mostrar
+            st.info(f"📍 **Filtro activo**: Mostrando {len(lugares_a_mostrar)} lugares de {len(st.session_state.tipos_simples_filtro)} tipo(s) seleccionado(s)")
         else:
+            # Mostrar todos los lugares
             lugares_a_mostrar = st.session_state.lugares_data
             lugares_destacados = None
+            st.info("📍 **Sin filtros**: Mostrando todos los lugares")
         
         # Crear el mapa
         mapa = crear_mapa_interactivo(
@@ -708,7 +720,7 @@ if st.session_state.grafo_cargado:
             height=600,
             returned_objects=["last_clicked", "last_object_clicked"]
         )
-        
+                
         # ============================================
         # 5. INFORMACIÓN DE CLICK (DEBAJO DEL MAPA)
         # ============================================
@@ -870,18 +882,30 @@ with st.sidebar:
         # Crear opciones con iconos
         opciones_con_iconos = [f"{iconos_tipos.get(tipo, '📍')} {tipo}" for tipo in tipos_unicos]
         
-        # CORRECCIÓN: st.multiselect vacío por defecto
+        # Inicializar en session_state si no existe
+        if 'tipos_seleccionados' not in st.session_state:
+            st.session_state.tipos_seleccionados = []
+        
+        # st.multiselect que guarda en session_state
         tipos_seleccionados = st.multiselect(
             "**Seleccionar tipos a mostrar:**",
             opciones_con_iconos,
-            default=[],  # Vacío por defecto = mostrar todos
+            default=st.session_state.tipos_seleccionados,  # Usar session_state
             help="Deja vacío para mostrar todos los tipos. Selecciona tipos específicos para filtrar."
         )
         
-        # Convertir de nuevo a tipos simples (sin iconos)
-        tipos_simples = [tipo.replace("🏘️ ", "").replace("⛪ ", "").replace("🏔️ ", "").replace("✝️ ", "").replace("🛣️ ", "").replace("📍 ", "") for tipo in tipos_seleccionados]
+        # Actualizar session_state cuando cambia la selección
+        if tipos_seleccionados != st.session_state.tipos_seleccionados:
+            st.session_state.tipos_seleccionados = tipos_seleccionados
+            st.rerun()
         
-        # Mostrar contador - LÓGICA CORREGIDA
+        # Convertir de nuevo a tipos simples (sin iconos) para usar en el filtro
+        tipos_simples = [tipo.replace("🏘️ ", "").replace("⛪ ", "").replace("🏔️ ", "").replace("✝️ ", "").replace("🛣️ ", "").replace("📍 ", "") for tipo in st.session_state.tipos_seleccionados]
+        
+        # Guardar tipos_simples en session_state para usar fuera del sidebar
+        st.session_state.tipos_simples_filtro = tipos_simples
+        
+        # Mostrar contador
         if tipos_simples:
             # Si hay tipos seleccionados, mostrar solo esos
             total_filtrado = len([l for l in st.session_state.lugares_data if l['tipo_general'] in tipos_simples])
