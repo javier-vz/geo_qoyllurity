@@ -997,18 +997,18 @@ with st.sidebar:
                 col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
                 
                 with col_btn1:
-                    aplicar = st.form_submit_button("Apl",  # 3 letras máximo
+                    aplicar = st.form_submit_button("Aplicar",  # 3 letras máximo
                                                    use_container_width=True,
                                                    help="Aplicar filtros seleccionados")
                 
                 with col_btn2:
-                    todos = st.form_submit_button("Todo",  # 4 letras máximo
+                    todos = st.form_submit_button("Todos",  # 4 letras máximo
                                                  use_container_width=True, 
                                                  type="secondary",
                                                  help="Seleccionar todos los tipos")
                 
                 with col_btn3:
-                    ninguno = st.form_submit_button("Ning",  # 4 letras máximo
+                    ninguno = st.form_submit_button("Ninguno",  # 4 letras máximo
                                                    use_container_width=True, 
                                                    type="secondary",
                                                    help="Deseleccionar todos los tipos")
