@@ -782,7 +782,7 @@ with st.sidebar:
     <div style="text-align: center; margin-bottom: 15px;">
         <img src="{IMAGEN_MONTAÑA_URL}" style="width: 100%; border-radius: 8px;">
         <p style="font-size: 12px; color: #666; margin-top: 5px; font-style: italic;">
-            Vista de la montaña ritual Qoyllur Rit'i
+            Fotografía de la Festividad del Señor de Qoyllur Rit'i (2025)
         </p>
     </div>
     """, unsafe_allow_html=True)
