@@ -870,28 +870,30 @@ with st.sidebar:
         # Crear opciones con iconos
         opciones_con_iconos = [f"{iconos_tipos.get(tipo, '📍')} {tipo}" for tipo in tipos_unicos]
         
-        # Usar st.multiselect como pediste
+        # CORRECCIÓN: st.multiselect vacío por defecto
         tipos_seleccionados = st.multiselect(
-            "**Seleccionar tipos:**",
+            "**Seleccionar tipos a mostrar:**",
             opciones_con_iconos,
-            default=opciones_con_iconos,  # Por defecto seleccionar todos
-            help="Selecciona uno o varios tipos de lugares para filtrar"
+            default=[],  # Vacío por defecto = mostrar todos
+            help="Deja vacío para mostrar todos los tipos. Selecciona tipos específicos para filtrar."
         )
         
         # Convertir de nuevo a tipos simples (sin iconos)
         tipos_simples = [tipo.replace("🏘️ ", "").replace("⛪ ", "").replace("🏔️ ", "").replace("✝️ ", "").replace("🛣️ ", "").replace("📍 ", "") for tipo in tipos_seleccionados]
         
-        # Mostrar contador
+        # Mostrar contador - LÓGICA CORREGIDA
         if tipos_simples:
+            # Si hay tipos seleccionados, mostrar solo esos
             total_filtrado = len([l for l in st.session_state.lugares_data if l['tipo_general'] in tipos_simples])
-            st.info(f"**Mostrando {total_filtrado} lugares**")
+            st.info(f"**Mostrando {total_filtrado} lugares** de {len(tipos_simples)} tipo(s) seleccionado(s)")
         else:
-            st.warning("No hay tipos seleccionados. Mostrando todos los lugares.")
+            # Si no hay tipos seleccionados, mostrar todos
+            st.info(f"**Mostrando todos los {total_lugares} lugares** (sin filtros)")
     
     st.divider()
     
     # Para la sección de tipos de lugares (solo referencia visual)
-    st.subheader("🗺️ Tipos de lugares")
+    st.subheader("🗺️ Tipos de lugares disponibles")
     
     if st.session_state.grafo_cargado:
         # Contar lugares por tipo
