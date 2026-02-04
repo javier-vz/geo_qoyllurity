@@ -786,6 +786,7 @@ with col_proyecto2:
 st.markdown("---")
 st.markdown("""
 **Descripción técnica**
+
 Este mapa interactivo utiliza datos de un **grafo de conocimiento RDF/Turtle** que implementa una ontología específica para festividades andinas. 
 El modelo define clases como `Festividad`, `Lugar`, `EventoRitual` y `RecursoMedial`, utilizando propiedades como `SeCelebraEn` e `estaEnLugar` para 
 estructurar la información. Los datos actuales representan entidades concretas (individuos) como `Paucartambo` o `Sinakara`, anotadas con metadatos 
