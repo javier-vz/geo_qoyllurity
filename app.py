@@ -574,15 +574,11 @@ def crear_mapa_interactivo(grafo, lugares_data, center_lat=-13.53, center_lon=-7
     return mapa
 
 # -------------------------------------------------------------------
-# INTERFAZ STREAMLIT MEJORADA - 2 COLUMNAS
+# INTERFAZ STREAMLIT REORGANIZADA - MAPA DOMINANTE
 # -------------------------------------------------------------------
 
-# Título principal
-st.title("Mapa de la Festividad del Señor de Qoyllur Rit'i")
-st.markdown("Exploración interactiva de lugares rituales basada en información registrada durante 2025. La información es parcial y está en proceso de verificación.")
-
 # ============================================
-# 1. CARGAR DATOS AUTOMÁTICAMENTE
+# 1. CARGA AUTOMÁTICA DE DATOS (SILENCIOSA)
 # ============================================
 if not st.session_state.grafo_cargado:
     with st.spinner("Cargando datos del grafo..."):
@@ -599,225 +595,237 @@ if not st.session_state.grafo_cargado:
             st.error(f"Error al cargar datos: {mensaje}")
 
 # ============================================
-# 2. INSTRUCCIONES ARRIBA
+# 2. LAYOUT PRINCIPAL - MAPA ARRIBA, CONTROLES LATERALES
 # ============================================
-with st.expander("📋 Cómo usar el mapa", expanded=False):
-    col1, col2, col3 = st.columns(3)
-    with col1:
+
+# Título principal (más pequeño)
+st.markdown("<h1 style='text-align: center; font-size: 24px;'>Mapa Interactivo del Señor de Qoyllur Rit'i</h1>", unsafe_allow_html=True)
+
+# Breve descripción
+st.caption("Exploración interactiva de lugares rituales basada en información registrada durante 2025. La información es parcial y está en proceso de verificación.")
+
+# Divider sutil
+st.divider()
+
+# ============================================
+# 3. CONTROLES PRINCIPALES EN 2 COLUMNAS ARRIBA
+# ============================================
+col_controles1, col_controles2 = st.columns([2, 1])
+
+with col_controles1:
+    # Controles de mapa en 4 columnas compactas
+    col_estilo, col_zoom, col_lat, col_lon = st.columns(4)
+    
+    with col_estilo:
+        estilo_mapa = st.selectbox(
+            "**Estilo del mapa**",
+            ["Relieve", "Topográfico", "Mapa básico", "Blanco y negro", "Claro"],
+            index=0,
+            help="Selecciona el estilo visual del mapa"
+        )
+    
+    with col_zoom:
+        zoom_level = st.slider("**Nivel de zoom**", 8, 15, 10, help="Ajusta el nivel de zoom del mapa")
+    
+    with col_lat:
+        centro_lat = st.number_input("**Latitud**", value=-13.53, format="%.4f", key="lat_input")
+    
+    with col_lon:
+        centro_lon = st.number_input("**Longitud**", value=-71.97, format="%.4f", key="lon_input")
+
+with col_controles2:
+    # Botón de centrado
+    if st.button("🔄 **Centrar mapa**", use_container_width=True, type="secondary"):
+        st.session_state.mapa_cargado = True
+        st.rerun()
+
+# Instrucciones compactas en expander
+with st.expander("📋 **Cómo usar el mapa**", expanded=False):
+    col_inst1, col_inst2, col_inst3 = st.columns(3)
+    with col_inst1:
         st.markdown("""
         **📍 Haga click en cualquier marcador**
         
         Para ver información detallada sobre el lugar
         """)
-    with col2:
+    with col_inst2:
         st.markdown("""
         **🗺️ Use el control de capas**
         
         Para cambiar el estilo del mapa
         """)
-    with col3:
+    with col_inst3:
         st.markdown("""
         **🔍 Ajuste el zoom**
         
         Con los controles o la rueda del mouse
         """)
 
-# ============================================
-# 3. CONTROLES ARRIBA - VISIBLES
-# ============================================
-st.divider()
-st.subheader("Configuración del mapa")
-
-# Controles en 4 columnas
-col_estilo, col_zoom, col_lat, col_lon = st.columns(4)
-
-with col_estilo:
-    estilo_mapa = st.selectbox(
-        "Estilo del mapa",
-        ["Relieve", "Topográfico", "Mapa básico", "Blanco y negro", "Claro"],
-        index=0
-    )
-
-with col_zoom:
-    zoom_level = st.slider("Nivel de zoom", 8, 15, 10)
-
-with col_lat:
-    centro_lat = st.number_input("Latitud", value=-13.53, format="%.4f", key="lat_input")
-
-with col_lon:
-    centro_lon = st.number_input("Longitud", value=-71.97, format="%.4f", key="lon_input")
-
-# Botón centrar
-if st.button("🔄 Centrar mapa en esta ubicación", use_container_width=True):
-    st.session_state.mapa_cargado = True
-
-st.divider()
+# Espacio antes del mapa
+st.markdown("<br>", unsafe_allow_html=True)
 
 # ============================================
-# 4. LAYOUT DE 2 COLUMNAS PRINCIPALES
+# 4. MAPA PRINCIPAL - GRANDE Y DOMINANTE
 # ============================================
-col_mapa, col_info = st.columns([2, 1])
-
-with col_mapa:
-    # ============================================
-    # 5. MAPA GRANDE
-    # ============================================
-    if st.session_state.grafo_cargado:
-        try:
-            mapa = crear_mapa_interactivo(
-                st.session_state.grafo,
-                st.session_state.lugares_data,
-                centro_lat,
-                centro_lon,
-                zoom_level,
-                estilo_mapa
-            )
+if st.session_state.grafo_cargado:
+    try:
+        # Crear el mapa
+        mapa = crear_mapa_interactivo(
+            st.session_state.grafo,
+            st.session_state.lugares_data,
+            centro_lat,
+            centro_lon,
+            zoom_level,
+            estilo_mapa
+        )
+        
+        # Mostrar mapa EN GRANDE - usando todo el ancho disponible
+        mapa_data = st_folium(
+            mapa,
+            width=None,  # Usar ancho completo
+            height=600,  # Altura fija suficiente
+            returned_objects=["last_clicked", "last_object_clicked"]
+        )
+        
+        # ============================================
+        # 5. INFORMACIÓN DE CLICK (DEBAJO DEL MAPA)
+        # ============================================
+        if mapa_data and mapa_data.get("last_object_clicked"):
+            clicked_lat = mapa_data["last_object_clicked"]["lat"]
+            clicked_lon = mapa_data["last_object_clicked"]["lng"]
             
-            # Mostrar mapa GRANDE
-            mapa_data = st_folium(
-                mapa,
-                width=900,
-                height=650,
-                returned_objects=["last_clicked", "last_object_clicked"]
-            )
+            # Buscar lugares en ese punto
+            lugares_en_punto = []
             
-            # ============================================
-            # 6. PANEL DE INFORMACIÓN DE CLICK
-            # ============================================
-            if mapa_data and mapa_data.get("last_object_clicked"):
-                clicked_lat = mapa_data["last_object_clicked"]["lat"]
-                clicked_lon = mapa_data["last_object_clicked"]["lng"]
+            for lugar in st.session_state.lugares_data:
+                if lugar['lat'] and lugar['lon']:
+                    if (abs(lugar['lat'] - clicked_lat) < 0.0001 and 
+                        abs(lugar['lon'] - clicked_lon) < 0.0001):
+                        lugares_en_punto.append(lugar)
+            
+            if lugares_en_punto:
+                st.divider()
+                st.subheader("📍 Información del lugar seleccionado")
                 
-                # Buscar lugares en ese punto
-                lugares_en_punto = []
-                
-                for lugar in st.session_state.lugares_data:
-                    if lugar['lat'] and lugar['lon']:
-                        if (abs(lugar['lat'] - clicked_lat) < 0.0001 and 
-                            abs(lugar['lon'] - clicked_lon) < 0.0001):
-                            lugares_en_punto.append(lugar)
-                
-                if lugares_en_punto:
-                    st.divider()
-                    st.subheader("📍 Información del lugar seleccionado")
+                if len(lugares_en_punto) == 1:
+                    lugar = lugares_en_punto[0]
+                    relaciones = obtener_relaciones_lugar(st.session_state.grafo, lugar['uri'])
                     
-                    if len(lugares_en_punto) == 1:
-                        lugar = lugares_en_punto[0]
-                        relaciones = obtener_relaciones_lugar(st.session_state.grafo, lugar['uri'])
-                        
-                        # Mostrar en columnas
-                        col_nombre, col_tipo = st.columns([2, 1])
-                        with col_nombre:
-                            st.markdown(f"### {lugar['nombre']}")
-                        with col_tipo:
-                            st.markdown(f"**{lugar['tipo_general']}**")
-                            st.caption(f"Nivel: {lugar['nivel']}")
-                        
-                        st.write(f"**Descripción:** {lugar['descripcion']}")
-                        
-                        col_coords, col_ubicacion = st.columns(2)
-                        with col_coords:
-                            st.write(f"**Coordenadas:**")
-                            st.code(f"{lugar['lat']:.6f}, {lugar['lon']:.6f}")
-                        with col_ubicacion:
-                            if lugar['ubicado_en']:
-                                st.write(f"**Ubicado en:** {lugar['ubicado_en']}")
-                        
-                        # Mostrar relaciones
-                        if relaciones['eventos']:
-                            with st.expander(f"Eventos asociados ({len(relaciones['eventos'])})"):
-                                for evento in relaciones['eventos']:
-                                    st.write(f"**{evento['nombre']}**")
-                                    if evento['descripcion']:
-                                        st.caption(evento['descripcion'])
-                        
-                        if relaciones['festividades']:
-                            with st.expander(f"Festividades ({len(relaciones['festividades'])})"):
-                                for fest in relaciones['festividades']:
-                                    st.write(f"**{fest['nombre']}**")
+                    # Mostrar información en columnas compactas
+                    col_info1, col_info2 = st.columns([2, 1])
                     
-                    else:
-                        st.write(f"**{len(lugares_en_punto)} lugares en esta ubicación**")
-                        
-                        # Selector para elegir lugar
-                        opciones = [f"{l['nombre']} ({l['tipo_general']})" for l in lugares_en_punto]
-                        seleccion = st.selectbox("Seleccionar lugar para ver detalles:", opciones, key="selector_lugar")
-                        
-                        idx = opciones.index(seleccion)
-                        lugar = lugares_en_punto[idx]
-                        relaciones = obtener_relaciones_lugar(st.session_state.grafo, lugar['uri'])
-                        
-                        st.write(f"**{lugar['nombre']}**")
-                        st.write(f"*{lugar['tipo_general']} - Nivel {lugar['nivel']}*")
+                    with col_info1:
+                        st.markdown(f"### {lugar['nombre']}")
                         st.write(f"**Descripción:** {lugar['descripcion']}")
-                        
-                        st.write(f"**Coordenadas:** {lugar['lat']:.6f}, {lugar['lon']:.6f}")
-                        
-        except Exception as e:
-            st.error(f"Error al crear el mapa: {str(e)}")
-    else:
-        st.warning("Esperando datos del grafo...")
+                    
+                    with col_info2:
+                        st.markdown(f"**Tipo:** {lugar['tipo_general']}")
+                        st.markdown(f"**Nivel:** {lugar['nivel']}")
+                        if lugar['ubicado_en']:
+                            st.markdown(f"**Ubicado en:** {lugar['ubicado_en']}")
+                    
+                    # Coordenadas en una línea
+                    st.markdown(f"**Coordenadas:** `{lugar['lat']:.6f}, {lugar['lon']:.6f}`")
+                    
+                    # Relaciones en expansores compactos
+                    if relaciones['eventos']:
+                        with st.expander(f"📅 Eventos asociados ({len(relaciones['eventos'])})"):
+                            for evento in relaciones['eventos']:
+                                st.markdown(f"**• {evento['nombre']}**")
+                                if evento['descripcion']:
+                                    st.caption(evento['descripcion'])
+                    
+                    if relaciones['festividades']:
+                        with st.expander(f"🎉 Festividades ({len(relaciones['festividades'])})"):
+                            for fest in relaciones['festividades']:
+                                st.markdown(f"**• {fest['nombre']}**")
+                    
+                else:
+                    # Múltiples lugares
+                    st.write(f"**Múltiples lugares ({len(lugares_en_punto)}) en esta ubicación**")
+                    
+                    # Selector compacto
+                    opciones = [f"{l['nombre']} ({l['tipo_general']})" for l in lugares_en_punto]
+                    seleccion = st.selectbox("Seleccionar lugar:", opciones, key="selector_lugar")
+                    
+                    idx = opciones.index(seleccion)
+                    lugar = lugares_en_punto[idx]
+                    relaciones = obtener_relaciones_lugar(st.session_state.grafo, lugar['uri'])
+                    
+                    col_ml1, col_ml2 = st.columns([2, 1])
+                    with col_ml1:
+                        st.markdown(f"**{lugar['nombre']}**")
+                        st.write(lugar['descripcion'])
+                    with col_ml2:
+                        st.markdown(f"*{lugar['tipo_general']}*")
+                        st.caption(f"Nivel: {lugar['nivel']}")
+        
+    except Exception as e:
+        st.error(f"Error al crear el mapa: {str(e)}")
+else:
+    st.warning("Cargando datos del grafo... por favor espere.")
 
-with col_info:
-    # ============================================
-    # 7. COLUMNA DERECHA: LEYENDA Y ESTADÍSTICAS
-    # ============================================
-    st.subheader("📊 Información del conjunto de datos")
+# ============================================
+# 6. SIDEBAR CON INFORMACIÓN ADICIONAL
+# ============================================
+with st.sidebar:
+    st.header("📊 Información del dataset")
     
     if st.session_state.grafo_cargado:
         total_lugares = len(st.session_state.lugares_data)
         lugares_con_coords = len([l for l in st.session_state.lugares_data if l['lat'] and l['lon']])
         
-        st.metric("Total de lugares", total_lugares)
-        st.metric("Con coordenadas", lugares_con_coords)
-        
-        st.divider()
+        col_metric1, col_metric2 = st.columns(2)
+        with col_metric1:
+            st.metric("Total lugares", total_lugares)
+        with col_metric2:
+            st.metric("Con coords", lugares_con_coords)
+    
+    st.divider()
     
     st.subheader("🎯 Tipos de lugares")
     
-    # Tabla de tipos con iconos
     tipos_lugares = [
         {"icono": "🏘️", "tipo": "Localidad", "descripcion": "Poblados y comunidades"},
-        {"icono": "⛪", "tipo": "Santuario", "descripcion": "Espacios sagrados principales"},
+        {"icono": "⛪", "tipo": "Santuario", "descripcion": "Espacios sagrados"},
         {"icono": "🏔️", "tipo": "Glaciar", "descripcion": "Áreas de hielo ritual"},
         {"icono": "✝️", "tipo": "Iglesia", "descripcion": "Templos y capillas"},
         {"icono": "🛣️", "tipo": "Ruta", "descripcion": "Caminos rituales"},
-        {"icono": "📍", "tipo": "Lugar", "descripcion": "Otros espacios significativos"}
+        {"icono": "📍", "tipo": "Lugar", "descripcion": "Otros espacios"}
     ]
     
     for tipo_info in tipos_lugares:
-        st.write(f"**{tipo_info['icono']} {tipo_info['tipo']}**")
+        st.markdown(f"**{tipo_info['icono']} {tipo_info['tipo']}**")
         st.caption(tipo_info['descripcion'])
     
     st.divider()
     
     st.subheader("📈 Distribución por tipo")
-    if st.session_state.grafo_cargado:
+    if st.session_state.grafo_cargado and st.session_state.lugares_data:
         df_lugares = pd.DataFrame(st.session_state.lugares_data)
         distribucion = df_lugares['tipo_general'].value_counts()
         
-        # Mostrar como lista
         for tipo, cantidad in distribucion.items():
             porcentaje = (cantidad / total_lugares) * 100
-            st.write(f"• **{tipo}**: {cantidad} ({porcentaje:.1f}%)")
+            st.markdown(f"• **{tipo}**: {cantidad} ({porcentaje:.1f}%)")
     
     st.divider()
     
     st.subheader("ℹ️ Niveles de importancia")
-    st.write("""
+    st.markdown("""
     **A**: Entidades centrales  
     **B**: Contextuales  
     **C**: Estructurales
     
-    *Información basada en el estándar del grafo TTL*
+    *Basado en el estándar del grafo TTL*
     """)
 
 # ============================================
-# 8. PIE DE PÁGINA
+# 7. PIE DE PÁGINA DISCRETO
 # ============================================
+st.markdown("<br><br>", unsafe_allow_html=True)
 st.divider()
 st.caption("""
-**Mapa Interactivo del Señor de Qoyllur Rit'i** | 
-Datos extraídos del grafo de conocimiento TTL | 
-Información registrada durante 2025 - En proceso de verificación
+**Mapa Interactivo del Señor de Qoyllur Rit'i** | Datos del grafo de conocimiento TTL | 
+Información registrada 2025 - En proceso de verificación
 """)
